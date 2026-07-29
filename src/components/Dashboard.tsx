@@ -1,5 +1,6 @@
 import React from 'react';
-import { QueueStats, UserStats, Deck, Card, CEFRLevel } from '../types';
+import { QueueStats, UserStats, Deck, Card, CEFRLevel, UserSettings } from '../types';
+import { LEXICON_CARDS } from '../data/lexicon';
 
 interface DashboardProps {
   queueStats: QueueStats;
@@ -11,6 +12,7 @@ interface DashboardProps {
   onStartBonusStudy: () => void;
   cards?: Card[];
   wordsLearnedCount?: number;
+  settings?: UserSettings;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -23,16 +25,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onStartBonusStudy,
   cards = [],
   wordsLearnedCount,
+  settings,
 }) => {
   const totalDueToday = queueStats.newCount + queueStats.learningCount + queueStats.reviewCount;
+  const bonusExtraCount = settings?.bonusExtraCards ?? 15;
 
   // Selected deck cards
   const selectedDeckCards = cards.filter((c) => c.deckId === selectedDeckId);
   const displayCards = selectedDeckCards.length > 0 ? selectedDeckCards : cards;
 
-  // Unseen cards counts
-  const totalUnseenLexicon = cards.filter((c) => c.state === 0).length;
-  const selectedDeckUnseenCount = selectedDeckCards.filter((c) => c.state === 0).length;
+  // Unseen cards counts in global master catalog (LEXICON_CARDS)
+  const learnedCardIds = new Set(cards.filter((c) => c.state > 0).map((c) => c.id));
+  const totalUnseenLexicon = LEXICON_CARDS.filter((c) => !learnedCardIds.has(c.id)).length;
+  const selectedDeckUnseenCount = LEXICON_CARDS.filter(
+    (c) => c.deckId === selectedDeckId && !learnedCardIds.has(c.id)
+  ).length;
 
   // Calculate total learned words if not passed as explicit prop
   const totalLearned =
@@ -82,7 +89,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     );
   };
 
-  // Calculate Frequency Tier Distribution for display cards
+  // Calculate Frequency Tier Distribution for master lexicon
   const frequencyTiers = [
     {
       id: 'tier-core',
@@ -130,16 +137,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
     },
   ];
 
-  // Helper to compute stats for each tier
+  // Helper to compute stats for each tier relative to LEXICON_CARDS (global master catalog)
   const tierStats = frequencyTiers.map((tier) => {
-    const tierCards = displayCards.filter((c) => {
+    const globalTierCards = LEXICON_CARDS.filter((c) => {
       const rank = c.frequencyRank ?? (parseInt(c.id.replace(/\D/g, ''), 10) || 1);
       return rank >= tier.rangeMin && rank <= tier.rangeMax;
     });
-    const total = tierCards.length;
-    const reviewed = tierCards.filter((c) => c.state === 2).length;
-    const learning = tierCards.filter((c) => c.state === 1 || c.state === 3).length;
-    const newCount = tierCards.filter((c) => c.state === 0).length;
+    const total = globalTierCards.length;
+
+    const userTierCards = cards.filter((c) => {
+      const rank = c.frequencyRank ?? (parseInt(c.id.replace(/\D/g, ''), 10) || 1);
+      return rank >= tier.rangeMin && rank <= tier.rangeMax;
+    });
+    const reviewed = userTierCards.filter((c) => c.state === 2).length;
+    const learning = userTierCards.filter((c) => c.state === 1 || c.state === 3).length;
+    const newCount = Math.max(0, total - reviewed - learning);
     const percent = total > 0 ? Math.round((reviewed / total) * 100) : 0;
 
     return {
@@ -152,13 +164,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
   });
 
-  // Calculate overall CEFR level progress stats
+  // Calculate overall CEFR level progress stats relative to LEXICON_CARDS (global master catalog)
   const cefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
   const cefrStats = cefrLevels
     .map((lvl) => {
-      const lvlCards = displayCards.filter((c) => (c.cefrLevel || 'A1').toUpperCase() === lvl);
-      const total = lvlCards.length;
-      const reviewed = lvlCards.filter((c) => c.state === 2).length;
+      const globalLvlCards = LEXICON_CARDS.filter((c) => (c.cefrLevel || 'A1').toUpperCase() === lvl);
+      const total = globalLvlCards.length;
+      const userLvlCards = cards.filter((c) => (c.cefrLevel || 'A1').toUpperCase() === lvl);
+      const reviewed = userLvlCards.filter((c) => c.state === 2).length;
       const percent = total > 0 ? Math.round((reviewed / total) * 100) : 0;
       return { level: lvl, total, reviewed, percent };
     })
@@ -188,7 +201,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </>
               ) : (
                 <>
-                  Du har slutfört alla dagens repetitioner! 🎉 Fortsätt hålla din svit levande.
+                  Du har slutfört alla dagens repetitioner! 🎉 Fortsätt hålla din svit levande eller ta en snabb-repetition.
                 </>
               )}
             </p>
@@ -198,13 +211,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={onStartStudy}
-              disabled={totalDueToday === 0}
-              className={`min-h-[52px] px-6 py-3.5 text-sm sm:text-base font-extrabold rounded-xl flex items-center justify-center gap-2.5 shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] ${
+              className={`min-h-[52px] px-6 py-3.5 text-sm sm:text-base font-extrabold rounded-xl flex items-center justify-center gap-2.5 shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-98 cursor-pointer ${
                 totalDueToday > 0
-                  ? 'bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98'
-                  : 'bg-[#1E293B] text-[#94A3B8] border border-[#263554] cursor-not-allowed opacity-75 shadow-none'
+                  ? 'bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] shadow-[#00D2FF]/20 hover:brightness-110'
+                  : 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-[#0F172A] shadow-emerald-500/20 hover:brightness-110'
               }`}
-              aria-label={totalDueToday > 0 ? 'Starta dagens repetitionssession' : 'Dagens repetition är klar'}
+              aria-label={totalDueToday > 0 ? 'Starta dagens repetitionssession' : 'Starta snabb-repetition'}
             >
               {totalDueToday > 0 ? (
                 <>
@@ -218,10 +230,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </>
               ) : (
                 <>
-                  <svg className="w-5 h-5 text-[#10B981]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  <svg className="w-5 h-5 text-[#0F172A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  <span>Dagens Repetition Klar! 🎉</span>
+                  <span>Snabb-repetition ⚡</span>
                 </>
               )}
             </button>
@@ -229,21 +241,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex flex-col items-center gap-1 w-full sm:w-auto">
               <button
                 onClick={onStartBonusStudy}
-                disabled={totalUnseenLexicon === 0}
-                className={`w-full sm:w-auto min-h-[52px] px-5 py-3.5 text-sm font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] ${
-                  totalUnseenLexicon > 0
-                    ? 'bg-[#1E293B] hover:bg-[#263554] border border-[#00D2FF]/40 hover:border-[#00D2FF] text-white hover:shadow-[#00D2FF]/10 active:scale-98'
-                    : 'bg-[#1E293B] text-[#94A3B8] border border-[#263554] cursor-not-allowed opacity-75 shadow-none'
-                }`}
-                title={totalUnseenLexicon > 0 ? 'Studera 15 extra nya ord utöver den dagliga gränsen' : 'Alla ord i lexikonet är inlärda'}
-                aria-label={totalUnseenLexicon > 0 ? 'Studera extra ord utöver dagliga gränsen' : 'Alla ord i lexikonet är inlärda'}
+                className="w-full sm:w-auto min-h-[52px] px-5 py-3.5 text-sm font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] bg-[#1E293B] hover:bg-[#263554] border border-[#00D2FF]/40 hover:border-[#00D2FF] text-white hover:shadow-[#00D2FF]/10 active:scale-98 cursor-pointer"
+                title="Studera extra nya ord utöver den dagliga gränsen"
+                aria-label="Studera extra ord utöver dagliga gränsen"
               >
-                <span>{totalUnseenLexicon > 0 ? 'Studera extra ord 🚀' : 'Alla Ord Inlärda! 🏆'}</span>
-                {totalUnseenLexicon > 0 && (
-                  <span className="text-xs bg-[#00D2FF]/20 text-[#00D2FF] px-2 py-0.5 rounded-full font-bold">
-                    +15 Nya
-                  </span>
-                )}
+                <span>Studera extra ord 🚀</span>
+                <span className="text-xs bg-[#00D2FF]/20 text-[#00D2FF] px-2 py-0.5 rounded-full font-bold">
+                  +{bonusExtraCount} Nya
+                </span>
               </button>
               <span className="text-[10px] text-[#94A3B8]">
                 {selectedDeckUnseenCount > 0
@@ -320,7 +325,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span>Frekvens- & Nivåfördelning</span>
             </h2>
             <p className="text-xs text-[#94A3B8] mt-0.5">
-              Framsteg och täckning uppdelat i frekvensband och CEFR-nivåer
+              Framsteg och täckning beräknat utifrån hela lexikonets {LEXICON_CARDS.length} ord
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -367,7 +372,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   />
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-[#94A3B8] font-medium pt-0.5">
-                  <span>{tier.reviewed} av {tier.total} ord behärskade</span>
+                  <span>{tier.reviewed} av {tier.total} ord behärskade ({tier.percent}%)</span>
                   <span>{tier.total - tier.reviewed} återstår</span>
                 </div>
               </div>
@@ -379,7 +384,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {cefrStats.length > 0 && (
           <div className="pt-4 border-t border-[#263554]/60">
             <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-3">
-              Framsteg per CEFR-Nivå
+              Framsteg per CEFR-Nivå (Globalt Lexikon)
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               {cefrStats.map((s) => (
@@ -388,7 +393,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     {renderCefrBadge(s.level)}
                   </div>
                   <p className="text-base font-extrabold text-white mt-1">{s.percent}%</p>
-                  <p className="text-[10px] text-[#94A3B8]">{s.reviewed}/{s.total} kort</p>
+                  <p className="text-[10px] text-[#94A3B8]">{s.reviewed}/{s.total} ord</p>
                 </div>
               ))}
             </div>
@@ -485,17 +490,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
           <span className="text-xs font-bold text-[#00D2FF] bg-[#00D2FF]/10 px-3 py-1 rounded-full border border-[#00D2FF]/30">
-            Frekvenssorterad samlingslek
+            Global Master Katalog ({LEXICON_CARDS.length} ord)
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {cefrLevels.map((lvl) => {
-            const lvlCards = cards.filter((c) => (c.cefrLevel || 'A1').toUpperCase() === lvl);
-            const total = lvlCards.length;
-            const learned = lvlCards.filter((c) => c.state > 0).length;
-            const reviewed = lvlCards.filter((c) => c.state === 2).length;
-            const unseen = lvlCards.filter((c) => c.state === 0).length;
+            const globalLvlCards = LEXICON_CARDS.filter((c) => (c.cefrLevel || 'A1').toUpperCase() === lvl);
+            const total = globalLvlCards.length;
+            const userLvlCards = cards.filter((c) => (c.cefrLevel || 'A1').toUpperCase() === lvl);
+            const learned = userLvlCards.filter((c) => c.state > 0).length;
+            const reviewed = userLvlCards.filter((c) => c.state === 2).length;
+            const unseen = Math.max(0, total - learned);
             const percent = total > 0 ? Math.round((learned / total) * 100) : 0;
 
             const lvlDescriptions: Record<string, string> = {
@@ -545,7 +551,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     />
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-[#94A3B8] font-semibold pt-1">
-                    <span>{learned} av {total} ord i kortleken ({percent}%)</span>
+                    <span>{learned} av {total} ord ({percent}%)</span>
                     <span className="text-[#06B6D4]">{unseen} oinledda</span>
                   </div>
                 </div>
@@ -560,3 +566,4 @@ export const Dashboard: React.FC<DashboardProps> = ({
 };
 
 export default Dashboard;
+

@@ -29,6 +29,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null;
 
   const presetDailyCards = [5, 10, 15, 20, 30, 50];
+  const presetBonusCards = [5, 10, 15, 20, 25, 30];
+  const presetResetHours = [
+    { hour: 0, label: '00:00' },
+    { hour: 4, label: '04:00' },
+    { hour: 8, label: '08:00' },
+    { hour: 12, label: '12:00' },
+    { hour: 18, label: '18:00' },
+    { hour: 22, label: '22:00' },
+  ];
 
   const handleTestAudio = async () => {
     setIsPlayingTestAudio(true);
@@ -137,7 +146,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <label htmlFor="daily-cards-slider" className="text-sm font-bold text-white block">
+                <label htmlFor="daily-cards-input" className="text-sm font-bold text-white block">
                   Dagliga Nya Kort
                 </label>
                 <p className="text-xs text-[#94A3B8]">
@@ -154,29 +163,112 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               id="daily-cards-slider"
               type="range"
               min="5"
-              max="50"
+              max="100"
               step="5"
-              value={settings.dailyNewCards}
+              value={Math.min(100, settings.dailyNewCards)}
               onChange={(e) => onUpdateSettings({ dailyNewCards: parseInt(e.target.value, 10) })}
               className="w-full h-2 bg-[#0F172A] rounded-lg appearance-none cursor-pointer accent-[#00D2FF] border border-[#263554]"
             />
 
-            {/* Preset Buttons */}
-            <div className="grid grid-cols-6 gap-2 pt-1">
-              {presetDailyCards.map((count) => (
-                <button
-                  key={count}
-                  onClick={() => onUpdateSettings({ dailyNewCards: count })}
-                  className={`min-h-[44px] py-2 rounded-xl text-xs font-bold transition-all border focus:outline-none focus:ring-2 focus:ring-[#00D2FF] ${
-                    settings.dailyNewCards === count
-                      ? 'bg-[#00D2FF] text-[#0F172A] border-[#00D2FF] shadow-md shadow-[#00D2FF]/20 font-extrabold'
-                      : 'bg-[#0F172A] text-[#94A3B8] border-[#263554] hover:border-[#00D2FF]/50 hover:text-white'
-                  }`}
-                  aria-label={`Ställ in ${count} nya kort per dag`}
-                >
-                  {count}
-                </button>
-              ))}
+            {/* Preset Buttons + Custom Input Field */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <div className="grid grid-cols-6 gap-2 flex-1 min-w-[240px]">
+                {presetDailyCards.map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    onClick={() => onUpdateSettings({ dailyNewCards: count })}
+                    className={`min-h-[44px] py-2 rounded-xl text-xs font-bold transition-all border focus:outline-none focus:ring-2 focus:ring-[#00D2FF] cursor-pointer ${
+                      settings.dailyNewCards === count
+                        ? 'bg-[#00D2FF] text-[#0F172A] border-[#00D2FF] shadow-md shadow-[#00D2FF]/20 font-extrabold'
+                        : 'bg-[#0F172A] text-[#94A3B8] border-[#263554] hover:border-[#00D2FF]/50 hover:text-white'
+                    }`}
+                    aria-label={`Ställ in ${count} nya kort per dag`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom Input */}
+              <div className="flex items-center gap-1.5 min-w-[120px]">
+                <span className="text-xs text-[#94A3B8] font-semibold whitespace-nowrap">Egen:</span>
+                <input
+                  id="daily-cards-input"
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={settings.dailyNewCards}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) {
+                      onUpdateSettings({ dailyNewCards: Math.min(500, Math.max(1, val)) });
+                    }
+                  }}
+                  className="w-full min-h-[44px] px-3 py-2 bg-[#0F172A] border border-[#263554] rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#00D2FF] text-center"
+                  placeholder="1-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <hr className="border-[#263554]/60" />
+
+          {/* ================= EXTRA WORDS PER SESSION (BONUS) ================= */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <label htmlFor="bonus-cards-input" className="text-sm font-bold text-white block">
+                  Extra Ord per Session (Bonus)
+                </label>
+                <p className="text-xs text-[#94A3B8]">
+                  Antal nya ord som laddas när du klickar på "Studera extra ord 🚀"
+                </p>
+              </div>
+              <span className="text-sm font-extrabold text-[#00D2FF] bg-[#00D2FF]/10 px-3 py-1 rounded-lg border border-[#00D2FF]/30">
+                {settings.bonusExtraCards ?? 15} ord
+              </span>
+            </div>
+
+            {/* Presets + Custom Input */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <div className="grid grid-cols-6 gap-2 flex-1 min-w-[240px]">
+                {presetBonusCards.map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    onClick={() => onUpdateSettings({ bonusExtraCards: count })}
+                    className={`min-h-[44px] py-2 rounded-xl text-xs font-bold transition-all border focus:outline-none focus:ring-2 focus:ring-[#00D2FF] cursor-pointer ${
+                      (settings.bonusExtraCards ?? 15) === count
+                        ? 'bg-[#00D2FF] text-[#0F172A] border-[#00D2FF] shadow-md shadow-[#00D2FF]/20 font-extrabold'
+                        : 'bg-[#0F172A] text-[#94A3B8] border-[#263554] hover:border-[#00D2FF]/50 hover:text-white'
+                    }`}
+                    aria-label={`Ställ in ${count} extra ord per session`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom Input */}
+              <div className="flex items-center gap-1.5 min-w-[120px]">
+                <span className="text-xs text-[#94A3B8] font-semibold whitespace-nowrap">Egen:</span>
+                <input
+                  id="bonus-cards-input"
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={settings.bonusExtraCards ?? 15}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) {
+                      onUpdateSettings({ bonusExtraCards: Math.min(500, Math.max(1, val)) });
+                    }
+                  }}
+                  className="w-full min-h-[44px] px-3 py-2 bg-[#0F172A] border border-[#263554] rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#00D2FF] text-center"
+                  placeholder="1-500"
+                />
+              </div>
             </div>
           </div>
 
@@ -186,7 +278,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <label htmlFor="day-reset-select" className="text-sm font-bold text-white block">
+                <label htmlFor="day-reset-time-input" className="text-sm font-bold text-white block">
                   Dagsåterställningstid (SRS-dygn)
                 </label>
                 <p className="text-xs text-[#94A3B8]">
@@ -198,19 +290,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </span>
             </div>
 
-            <select
-              id="day-reset-select"
-              value={settings.dayResetHour ?? 4}
-              onChange={(e) => onUpdateSettings({ dayResetHour: parseInt(e.target.value, 10) })}
-              className="w-full min-h-[44px] px-3 py-2 bg-[#0F172A] border border-[#263554] rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
-              aria-label="Välj dagsåterställningstid"
-            >
-              <option value={0}>00:00 (Midnatt)</option>
-              <option value={2}>02:00 (Tidig natt)</option>
-              <option value={4}>04:00 (Standard natt - rekommenderat)</option>
-              <option value={5}>05:00 (Morgon)</option>
-              <option value={6}>06:00 (Morgon)</option>
-            </select>
+            {/* Time Clock Picker & Quick Presets */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-[#94A3B8]">Klockslag:</span>
+                <input
+                  id="day-reset-time-input"
+                  type="time"
+                  step="3600"
+                  value={`${String(settings.dayResetHour ?? 4).padStart(2, '0')}:00`}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      const hour = parseInt(val.split(':')[0], 10);
+                      if (!isNaN(hour)) {
+                        onUpdateSettings({ dayResetHour: hour });
+                      }
+                    }
+                  }}
+                  className="min-h-[44px] px-4 py-2 bg-[#0F172A] border border-[#263554] rounded-xl text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
+                  aria-label="Välj dagsåterställningstid klockslag"
+                />
+              </div>
+
+              {/* Quick Presets */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1">
+                {presetResetHours.map((preset) => (
+                  <button
+                    key={preset.hour}
+                    type="button"
+                    onClick={() => onUpdateSettings({ dayResetHour: preset.hour })}
+                    className={`min-h-[40px] py-2 rounded-xl text-xs font-bold transition-all border focus:outline-none focus:ring-2 focus:ring-[#00D2FF] cursor-pointer ${
+                      (settings.dayResetHour ?? 4) === preset.hour
+                        ? 'bg-[#F59E0B] text-[#0F172A] border-[#F59E0B] shadow-md shadow-[#F59E0B]/20 font-extrabold'
+                        : 'bg-[#0F172A] text-[#94A3B8] border-[#263554] hover:border-[#F59E0B]/50 hover:text-white'
+                    }`}
+                    aria-label={`Ställ in återställningstid till kl ${preset.label}`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <hr className="border-[#263554]/60" />

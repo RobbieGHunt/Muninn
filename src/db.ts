@@ -14,6 +14,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   speechRate: 1.0,
   autoPlayAudio: true,
   dayResetHour: 4, // Default 04:00 AM reset
+  bonusExtraCards: 15,
 };
 
 export const INITIAL_USER_STATS: UserStats = {

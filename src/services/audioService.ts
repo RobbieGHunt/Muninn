@@ -139,6 +139,7 @@ export class AudioService {
    */
   public setRate(rate: number): void {
     this.defaultRate = Math.max(0.5, Math.min(2.0, rate));
+    this.stop();
   }
 
   /**
@@ -254,7 +255,7 @@ export class AudioService {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'sv-SE';
-    utterance.rate = options.rate !== undefined ? options.rate : this.defaultRate;
+    utterance.rate = Math.max(0.5, Math.min(1.5, options.rate !== undefined ? options.rate : this.defaultRate));
     utterance.pitch = options.pitch !== undefined ? options.pitch : 1.0;
     utterance.volume = options.volume !== undefined ? options.volume : 1.0;
 
@@ -284,6 +285,7 @@ export class AudioService {
     };
 
     this.currentUtterance = utterance;
+    this.synth.cancel();
     this.synth.speak(utterance);
   }
 }

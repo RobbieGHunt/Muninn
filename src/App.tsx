@@ -7,6 +7,8 @@ import { Dashboard } from './components/Dashboard';
 import { StudyCard } from './components/StudyCard';
 import { SettingsModal } from './components/SettingsModal';
 
+import { audioService } from './services/audioService';
+
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [cards, setCards] = useState<Card[]>(INITIAL_CARDS);
@@ -32,6 +34,7 @@ export const App: React.FC = () => {
       dailyReviewLimit: 100,
       speechRate: 0.9,
       autoPlayAudio: true,
+      bonusExtraCards: 15,
     };
   });
 
@@ -41,6 +44,13 @@ export const App: React.FC = () => {
   const [studyQueue, setStudyQueue] = useState<Card[]>([]);
   const [studyIndex, setStudyIndex] = useState<number>(0);
   const [sessionCompletedCount, setSessionCompletedCount] = useState<number>(0);
+
+  // Sync audio rate setting with audioService
+  useEffect(() => {
+    if (settings.speechRate !== undefined) {
+      audioService.setRate(settings.speechRate);
+    }
+  }, [settings.speechRate]);
 
   // Load Initial Data from IndexedDB
   useEffect(() => {
@@ -161,6 +171,18 @@ export const App: React.FC = () => {
     const dueQueue = [...dueLearning, ...dueReviews, ...dueNewCards];
 
     if (dueQueue.length === 0) {
+      // Fallback to selecting 15 practice cards sorted by due ASC or stability ASC
+      const sourceCards = currentDeckCards.length > 0 ? currentDeckCards : cards;
+      const fallbackQueue = [...sourceCards]
+        .sort((a, b) => (a.due - b.due) || (a.stability - b.stability))
+        .slice(0, 15);
+
+      if (fallbackQueue.length === 0) return;
+
+      setStudyQueue(fallbackQueue);
+      setStudyIndex(0);
+      setSessionCompletedCount(0);
+      setCurrentView('study');
       return;
     }
 
@@ -174,15 +196,16 @@ export const App: React.FC = () => {
   // Allows studying new words an arbitrary number of times per day without repeating today's shown cards
   const handleStartBonusStudy = () => {
     const todayReset = getTodayResetTimestamp(settings.dayResetHour ?? 4);
+    const batchSize = settings.bonusExtraCards ?? 15;
 
-    // Draw next 15 fresh unseen cards (state === 0) that have NOT been presented today
+    // Draw fresh unseen cards from active deck
     const deckUnseenCards = currentDeckCards
       .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
       .sort((a, b) => a.frequencyRank - b.frequencyRank);
 
     let bonusQueue: Card[] = [];
-    if (deckUnseenCards.length >= 15) {
-      bonusQueue = deckUnseenCards.slice(0, 15);
+    if (deckUnseenCards.length >= batchSize) {
+      bonusQueue = deckUnseenCards.slice(0, batchSize);
     } else {
       const masterUnseenCards = cards
         .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
@@ -190,8 +213,19 @@ export const App: React.FC = () => {
       const deckCardIds = new Set(deckUnseenCards.map((c) => c.id));
       const masterFallbackCards = masterUnseenCards
         .filter((c) => !deckCardIds.has(c.id))
-        .slice(0, 15 - deckUnseenCards.length);
+        .slice(0, batchSize - deckUnseenCards.length);
+
       bonusQueue = [...deckUnseenCards, ...masterFallbackCards];
+
+      if (bonusQueue.length < batchSize) {
+        const existingIds = new Set(bonusQueue.map((c) => c.id));
+        const lowestStabilityCards = cards
+          .filter((c) => !existingIds.has(c.id))
+          .sort((a, b) => a.stability - b.stability)
+          .slice(0, batchSize - bonusQueue.length);
+
+        bonusQueue = [...bonusQueue, ...lowestStabilityCards];
+      }
     }
 
     if (bonusQueue.length === 0) {
