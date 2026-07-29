@@ -47,7 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           title="Gå till Instrumentbrädan"
           aria-label="Muninn Startsida och Instrumentbräda"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00D2FF] to-[#3A7BD5] flex items-center justify-center shadow-lg shadow-[#00D2FF]/20 group-hover:scale-105 transition-transform">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00D2FF] to-[#3A7BD5] flex items-center justify-center shadow-lg shadow-[#00D2FF]/20 group-hover:scale-105 transition-transform flex-shrink-0">
             <svg className="w-6 h-6 text-[#0F172A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               {/* Stylized Nordic Raven / Wings */}
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 3v18m0-18l7 5-7 5 7 5-7 5M12 3L5 8l7 5-7 5 7 5" />
@@ -70,10 +70,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Center: Current Deck Info (when studying) */}
         {currentView === 'study' && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#161F33] border border-[#263554]">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#161F33] border border-[#263554] shadow-sm">
             <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
             <span className="text-xs font-semibold text-[#94A3B8]">Studerar:</span>
-            <span className="text-xs font-bold text-white max-w-[140px] truncate">{deckTitle}</span>
+            <span className="text-xs font-bold text-white max-w-[160px] truncate">{deckTitle}</span>
             {renderCefrBadge(cefrLevel)}
           </div>
         )}
@@ -95,7 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Queue Count Badges */}
-          <div className="flex items-center gap-1.5 bg-[#161F33]/90 p-1 rounded-xl border border-[#263554]">
+          <div className="flex items-center gap-1.5 bg-[#161F33]/90 p-1 rounded-xl border border-[#263554] shadow-sm">
             {/* New Cards */}
             <div 
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#06B6D4]/15 border border-[#06B6D4]/30 text-[#06B6D4]"
@@ -128,7 +128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {currentView === 'study' ? (
             <button
               onClick={() => onNavigate('dashboard')}
-              className="min-h-[44px] sm:min-h-[48px] px-4 py-2 bg-[#161F33] hover:bg-[#263554] text-white border border-[#263554] text-xs font-bold rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-95 flex items-center justify-center"
+              className="min-h-[48px] min-w-[48px] px-4 py-2 bg-[#161F33] hover:bg-[#263554] text-white border border-[#263554] text-xs font-bold rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-95 flex items-center justify-center shadow-md"
               aria-label="Gå tillbaka till Instrumentbräda"
             >
               ← Översikt
@@ -136,7 +136,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <button
               onClick={() => onNavigate('study')}
-              className="min-h-[44px] sm:min-h-[48px] px-5 py-2 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] text-xs font-extrabold rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-95 shadow-md shadow-[#00D2FF]/20 flex items-center justify-center"
+              className="min-h-[48px] min-w-[48px] px-5 py-2 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] text-xs font-extrabold rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] hover:brightness-110 active:scale-95 shadow-md shadow-[#00D2FF]/20 flex items-center justify-center"
               aria-label="Starta repetitionssession"
             >
               Starta →

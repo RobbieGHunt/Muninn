@@ -235,13 +235,13 @@ export const App: React.FC = () => {
               <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
                 <button
                   onClick={() => setCurrentView('dashboard')}
-                  className="btn-touch btn-aurora px-6 py-3 text-sm font-bold w-full sm:w-auto"
+                  className="min-h-[48px] px-6 py-3 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] font-extrabold text-sm rounded-xl shadow-lg shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] w-full sm:w-auto"
                 >
                   Tillbaka till Instrumentbrädan
                 </button>
                 <button
                   onClick={handleStartStudy}
-                  className="btn-touch px-6 py-3 bg-[#161F33] hover:bg-[#263554] border border-[#263554] text-white text-sm font-bold w-full sm:w-auto"
+                  className="min-h-[48px] px-6 py-3 bg-[#161F33] hover:bg-[#263554] border border-[#263554] text-white text-sm font-bold rounded-xl transition-all active:scale-98 focus:outline-none focus:ring-2 focus:ring-[#00D2FF] w-full sm:w-auto"
                 >
                   Studera Igen 🔄
                 </button>

@@ -100,28 +100,28 @@ export const StudyCard: React.FC<StudyCardProps> = ({
   const renderGenderPill = () => {
     if (card.gender === 'en') {
       return (
-        <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#00D2FF]/20 border border-[#00D2FF]/40 text-[#00D2FF] shadow-sm">
+        <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#00D2FF]/15 border border-[#00D2FF]/40 text-[#00D2FF] shadow-sm">
           en-ord
         </span>
       );
     }
     if (card.gender === 'ett') {
       return (
-        <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#F59E0B]/20 border border-[#F59E0B]/40 text-[#F59E0B] shadow-sm">
+        <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#F59E0B]/15 border border-[#F59E0B]/40 text-[#F59E0B] shadow-sm">
           ett-ord
         </span>
       );
     }
     if (card.wordClass === 'verb') {
       return (
-        <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#10B981]/20 border border-[#10B981]/40 text-[#10B981] shadow-sm">
+        <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#10B981]/15 border border-[#10B981]/40 text-[#10B981] shadow-sm">
           verb
         </span>
       );
     }
     if (card.wordClass === 'adjektiv' || card.wordClass === 'adjective') {
       return (
-        <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#A855F7]/20 border border-[#A855F7]/40 text-[#A855F7] shadow-sm">
+        <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-[#A855F7]/15 border border-[#A855F7]/40 text-[#A855F7] shadow-sm">
           adjektiv
         </span>
       );
@@ -145,7 +145,7 @@ export const StudyCard: React.FC<StudyCardProps> = ({
     };
     return (
       <span
-        className={`px-2.5 py-1 rounded-full text-xs font-black tracking-wider uppercase border shadow-sm ${colors[level]}`}
+        className={`px-2.5 py-1 rounded-full text-xs font-black tracking-wider uppercase border shadow-sm ${colors[level] || colors.A1}`}
         title={`CEFR Nivå ${level}`}
         aria-label={`CEFR nivå ${level}`}
       >
@@ -170,20 +170,23 @@ export const StudyCard: React.FC<StudyCardProps> = ({
     );
   };
 
-  // Format example sentence with highlighted target word
+  // Format example sentence with glowing target word
   const renderHighlightedExample = (exampleSv?: string, targetWord?: string) => {
     if (!exampleSv) return null;
     if (!targetWord) return exampleSv;
 
-    // Simple case-insensitive match for word stem/exact word
-    const regex = new RegExp(`(${targetWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    // Extract core word clean of articles
+    const cleanWord = targetWord.replace(/^(en|ett)\s+/i, '').trim();
+    if (!cleanWord) return exampleSv;
+
+    const regex = new RegExp(`(${cleanWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     const parts = exampleSv.split(regex);
 
     return (
       <span className="text-[#F8FAFC]">
         {parts.map((part, i) =>
-          part.toLowerCase() === targetWord.toLowerCase() ? (
-            <span key={i} className="text-[#00D2FF] font-bold bg-[#00D2FF]/10 px-1 py-0.5 rounded border border-[#00D2FF]/30">
+          part.toLowerCase() === cleanWord.toLowerCase() ? (
+            <span key={i} className="text-[#00D2FF] font-bold bg-[#00D2FF]/15 px-1.5 py-0.5 rounded border border-[#00D2FF]/40 shadow-sm shadow-[#00D2FF]/20">
               {part}
             </span>
           ) : (
@@ -194,14 +197,47 @@ export const StudyCard: React.FC<StudyCardProps> = ({
     );
   };
 
+  // Safe helper to render Inflection Breakdown pills (handles string[] and InflectionTable object)
+  const renderInflectionPills = () => {
+    if (!card.inflections) return null;
+
+    let items: string[] = [];
+    if (Array.isArray(card.inflections)) {
+      items = card.inflections;
+    } else if (typeof card.inflections === 'object') {
+      items = Object.entries(card.inflections)
+        .filter(([_, val]) => Boolean(val))
+        .map(([key, val]) => `${val} (${key.replace(/([A-Z])/g, ' $1').toLowerCase()})`);
+    }
+
+    if (items.length === 0) return null;
+
+    return (
+      <div>
+        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-1.5">
+          Böjningsformer
+        </span>
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((form, i) => (
+            <span key={i} className="text-xs font-semibold px-2.5 py-1 rounded-md bg-[#1E293B] text-[#94A3B8] border border-[#263554] shadow-sm">
+              {form}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="w-full max-w-2xl mx-auto my-6 px-4">
+    <div className="w-full max-w-2xl mx-auto my-8 px-4">
       
       {/* Top Card Queue Progress Indicator */}
       <div className="flex items-center justify-between text-xs font-semibold text-[#94A3B8] mb-3 px-1">
-        <span aria-live="polite">Kort {currentIndex + 1} av {totalInQueue}</span>
-        <span className="bg-[#161F33] px-3 py-1 rounded-full border border-[#263554] font-medium text-white flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#00D2FF]"></span>
+        <span aria-live="polite" className="flex items-center gap-1.5">
+          <span className="text-[#00D2FF] font-bold">Kort {currentIndex + 1}</span> av {totalInQueue}
+        </span>
+        <span className="bg-[#161F33] px-3 py-1 rounded-full border border-[#263554] font-medium text-white flex items-center gap-1.5 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-[#00D2FF] animate-pulse"></span>
           {card.state === 0 ? '🆕 Nytt kort' : card.state === 1 ? '🔄 Lär sig' : '⭐ Repetition'}
         </span>
       </div>
@@ -211,7 +247,7 @@ export const StudyCard: React.FC<StudyCardProps> = ({
         <div className={`flip-card-inner transition-transform duration-500 transform-style-3d ${isFlipped ? 'is-flipped' : ''}`}>
           
           {/* ================= FRONT SIDE ================= */}
-          <div className="flip-card-front bg-[#161F33]/90 border border-[#263554] rounded-2xl p-6 flex flex-col justify-between shadow-2xl backdrop-blur-md relative overflow-hidden">
+          <div className="flip-card-front bg-[#161F33]/90 border border-[#263554] rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl backdrop-blur-md relative overflow-hidden">
             
             {/* Top Bar: Grammar Gender Badge, CEFR Badge, Frequency Pill & Audio Button */}
             <div className="flex flex-wrap items-center justify-between w-full gap-2 mb-4">
@@ -226,7 +262,7 @@ export const StudyCard: React.FC<StudyCardProps> = ({
                   e.stopPropagation();
                   playAudio();
                 }}
-                className={`w-12 h-12 rounded-full bg-[#0F172A] border border-[#263554] hover:border-[#00D2FF] text-[#00D2FF] flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-95 ${
+                className={`w-12 h-12 rounded-full bg-[#0F172A] border border-[#263554] hover:border-[#00D2FF] text-[#00D2FF] flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-95 shadow-md ${
                   isPlayingAudio ? 'ring-2 ring-[#00D2FF] animate-pulse bg-[#00D2FF]/20' : ''
                 }`}
                 title="Lyssna på uttal (Tangentswitch: R)"
@@ -240,7 +276,7 @@ export const StudyCard: React.FC<StudyCardProps> = ({
 
             {/* Center Focal Point: Swedish Target Word */}
             <div className="my-auto py-8 flex flex-col items-center justify-center text-center">
-              <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight select-none">
+              <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight select-none drop-shadow-md">
                 {card.front}
               </h1>
               {card.ipa && (
@@ -251,25 +287,32 @@ export const StudyCard: React.FC<StudyCardProps> = ({
             </div>
 
             {/* Bottom Action: Reveal Answer */}
-            <div className="w-full pt-4 border-t border-[#263554]/60 flex flex-col items-center gap-2">
+            <div className="w-full pt-4 border-t border-[#263554]/60 flex flex-col items-center gap-3">
               <button
                 onClick={() => setIsFlipped(true)}
-                className="w-full min-h-[48px] py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] font-extrabold text-base shadow-lg shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
+                className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] font-extrabold text-base shadow-lg shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] flex items-center justify-center gap-2"
                 aria-label="Visa svar på kortet (Mellanslag)"
               >
-                Visa Svar <span className="text-xs font-normal opacity-80 ml-2">(Mellanslag)</span>
+                <span>Visa Svar</span>
+                <kbd className="bg-[#0F172A]/30 text-[#0F172A] border-[#0F172A]/20">Mellanslag</kbd>
               </button>
+
+              <div className="text-xs text-[#94A3B8] flex items-center gap-3">
+                <span><kbd>Space</kbd> Visa svar</span>
+                <span>•</span>
+                <span><kbd>R</kbd> Uttal</span>
+              </div>
             </div>
           </div>
 
           {/* ================= BACK SIDE ================= */}
-          <div className="flip-card-back bg-[#161F33]/90 border border-[#263554] rounded-2xl p-6 flex flex-col justify-between shadow-2xl backdrop-blur-md relative overflow-hidden">
+          <div className="flip-card-back bg-[#161F33]/90 border border-[#263554] rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl backdrop-blur-md relative overflow-hidden">
             
             {/* Top Header: Word + Badges + Audio */}
             <div className="flex flex-wrap items-center justify-between w-full mb-3 pb-3 border-b border-[#263554]/60 gap-2">
               <div className="text-left">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-2xl font-extrabold text-white">{card.front}</h2>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{card.front}</h2>
                   {renderGenderPill()}
                   {renderCefrBadge(cefrLevel)}
                   {renderFrequencyPill(frequencyRank)}
@@ -284,7 +327,7 @@ export const StudyCard: React.FC<StudyCardProps> = ({
                   e.stopPropagation();
                   playAudio();
                 }}
-                className={`w-11 h-11 rounded-full bg-[#0F172A] border border-[#263554] hover:border-[#00D2FF] text-[#00D2FF] flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-95 ${
+                className={`w-11 h-11 rounded-full bg-[#0F172A] border border-[#263554] hover:border-[#00D2FF] text-[#00D2FF] flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-95 shadow-md ${
                   isPlayingAudio ? 'ring-2 ring-[#00D2FF] animate-pulse bg-[#00D2FF]/20' : ''
                 }`}
                 title="Spela uttal (R)"
@@ -302,94 +345,98 @@ export const StudyCard: React.FC<StudyCardProps> = ({
               {/* Primary English Meaning */}
               <div>
                 <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-1">
-                  Översättning
+                  Engelsk Översättning
                 </span>
-                <p className="text-2xl font-bold text-[#00D2FF]">
+                <p className="text-2xl sm:text-3xl font-extrabold text-[#00D2FF] tracking-tight">
                   {card.back}
                 </p>
               </div>
 
-              {/* Context Example Sentence */}
+              {/* Context Example Sentence ($i+1$) */}
               {card.exampleSv && (
-                <div className="p-3.5 rounded-xl bg-[#0F172A]/70 border border-[#263554]/80">
+                <div className="p-4 rounded-xl bg-[#0F172A]/80 border border-[#263554]">
                   <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">
-                    Exempelmening
+                    Exempelmening ($i+1$)
                   </span>
-                  <p className="text-base font-medium leading-snug">
-                    {renderHighlightedExample(card.exampleSv, card.front.replace(/^(en|ett)\s+/i, ''))}
+                  <p className="text-base sm:text-lg font-medium leading-relaxed">
+                    {renderHighlightedExample(card.exampleSv, card.front)}
                   </p>
                   {card.exampleEn && (
-                    <p className="text-xs text-[#94A3B8] italic mt-1">
+                    <p className="text-xs text-[#94A3B8] italic mt-1.5">
                       "{card.exampleEn}"
                     </p>
                   )}
                 </div>
               )}
 
-              {/* Inflections Breakdown (if provided) */}
-              {card.inflections && Array.isArray(card.inflections) && card.inflections.length > 0 && (
-                <div>
-                  <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-1">
-                    Böjningsformer
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {card.inflections.map((form, i) => (
-                      <span key={i} className="text-xs font-semibold px-2.5 py-1 rounded-md bg-[#1E293B] text-[#94A3B8] border border-[#263554]">
-                        {form}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Inflections Breakdown */}
+              {renderInflectionPills()}
 
             </div>
 
-            {/* Bottom: 4 FSRS Rating Buttons (48px+ touch targets) */}
-            <div className="w-full pt-3 border-t border-[#263554]/60">
-              <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block mb-2 text-center">
+            {/* Bottom: 4 FSRS Rating Buttons (Anki Color Coded & 48px+ touch targets) */}
+            <div className="w-full pt-4 border-t border-[#263554]/60 space-y-2">
+              <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block text-center">
                 Hur väl kom du ihåg ordet?
               </span>
               
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {/* 1 - AGAIN */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {/* 1 - AGAIN (Coral Red) */}
                 <button
                   onClick={() => onRate(1)}
-                  className="min-h-[48px] py-2.5 px-2 rounded-xl bg-rose-500/10 border border-rose-500/30 hover:border-rose-500 text-rose-300 font-bold flex flex-col items-center justify-center transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  className="min-h-[52px] py-2.5 px-2 rounded-xl bg-rose-500/10 border border-rose-500/30 hover:border-rose-500 hover:bg-rose-500/20 text-rose-300 font-bold flex flex-col items-center justify-center transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-md"
                   aria-label="Igen, tangentswitch 1"
                 >
-                  <span className="text-xs font-extrabold uppercase">Igen (1)</span>
-                  <span className="text-[11px] opacity-80 font-medium">{intervalPreviews[1]}</span>
+                  <span className="text-xs font-extrabold uppercase flex items-center gap-1">
+                    <kbd className="bg-rose-950/80 text-rose-300 border-rose-800">1</kbd> Igen
+                  </span>
+                  <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalPreviews[1]}</span>
                 </button>
 
-                {/* 2 - HARD */}
+                {/* 2 - HARD (Amber Yellow) */}
                 <button
                   onClick={() => onRate(2)}
-                  className="min-h-[48px] py-2.5 px-2 rounded-xl bg-amber-500/10 border border-amber-500/30 hover:border-amber-500 text-amber-300 font-bold flex flex-col items-center justify-center transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="min-h-[52px] py-2.5 px-2 rounded-xl bg-amber-500/10 border border-amber-500/30 hover:border-amber-500 hover:bg-amber-500/20 text-amber-300 font-bold flex flex-col items-center justify-center transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-md"
                   aria-label="Svårt, tangentswitch 2"
                 >
-                  <span className="text-xs font-extrabold uppercase">Svårt (2)</span>
-                  <span className="text-[11px] opacity-80 font-medium">{intervalPreviews[2]}</span>
+                  <span className="text-xs font-extrabold uppercase flex items-center gap-1">
+                    <kbd className="bg-amber-950/80 text-amber-300 border-amber-800">2</kbd> Svårt
+                  </span>
+                  <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalPreviews[2]}</span>
                 </button>
 
-                {/* 3 - GOOD */}
+                {/* 3 - GOOD (Emerald Green) */}
                 <button
                   onClick={() => onRate(3)}
-                  className="min-h-[48px] py-2.5 px-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500 text-emerald-300 font-bold flex flex-col items-center justify-center transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="min-h-[52px] py-2.5 px-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-500/20 text-emerald-300 font-bold flex flex-col items-center justify-center transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-md"
                   aria-label="Bra, tangentswitch 3"
                 >
-                  <span className="text-xs font-extrabold uppercase">Bra (3)</span>
-                  <span className="text-[11px] opacity-80 font-medium">{intervalPreviews[3]}</span>
+                  <span className="text-xs font-extrabold uppercase flex items-center gap-1">
+                    <kbd className="bg-emerald-950/80 text-emerald-300 border-emerald-800">3</kbd> Bra
+                  </span>
+                  <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalPreviews[3]}</span>
                 </button>
 
-                {/* 4 - EASY */}
+                {/* 4 - EASY (Cyan Blue) */}
                 <button
                   onClick={() => onRate(4)}
-                  className="min-h-[48px] py-2.5 px-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 hover:border-cyan-500 text-cyan-300 font-bold flex flex-col items-center justify-center transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  className="min-h-[52px] py-2.5 px-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 hover:border-cyan-500 hover:bg-cyan-500/20 text-cyan-300 font-bold flex flex-col items-center justify-center transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-md"
                   aria-label="Lätt, tangentswitch 4"
                 >
-                  <span className="text-xs font-extrabold uppercase">Lätt (4)</span>
-                  <span className="text-[11px] opacity-80 font-medium">{intervalPreviews[4]}</span>
+                  <span className="text-xs font-extrabold uppercase flex items-center gap-1">
+                    <kbd className="bg-cyan-950/80 text-cyan-300 border-cyan-800">4</kbd> Lätt
+                  </span>
+                  <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalPreviews[4]}</span>
                 </button>
+              </div>
+
+              {/* Keyboard Hints Legend */}
+              <div className="text-[11px] text-[#94A3B8] pt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                <span><kbd>1</kbd> Igen (&lt;10m)</span>
+                <span><kbd>2</kbd> Svårt (1.2d)</span>
+                <span><kbd>3</kbd> Bra (3.5d)</span>
+                <span><kbd>4</kbd> Lätt (9.0d)</span>
+                <span><kbd>R</kbd> Uttal</span>
               </div>
             </div>
 

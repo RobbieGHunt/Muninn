@@ -149,7 +149,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }).filter(s => s.total > 0);
 
   return (
-    <div className="nordic-container space-y-8 py-4 px-4 sm:px-6 max-w-6xl mx-auto">
+    <div className="nordic-container space-y-8 py-6 px-4 sm:px-6 max-w-6xl mx-auto">
       
       {/* ================= HERO & START STUDY CALLOUT ================= */}
       <div className="glass-card bg-[#161F33]/90 border border-[#263554] rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-2xl backdrop-blur-md">
@@ -163,7 +163,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span className="text-xs text-[#94A3B8] font-semibold">Vald Kortlek & CEFR</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Välkommen tillbaka, Eleve!
+              Välkommen tillbaka!
             </h1>
             <p className="text-sm sm:text-base text-[#94A3B8] max-w-lg">
               Du har <span className="text-[#00D2FF] font-bold">{totalDueToday} kort</span> som väntar på repetition idag. Stärk din ordkunskap i svenska!
