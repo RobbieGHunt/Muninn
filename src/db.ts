@@ -73,9 +73,24 @@ class IndexedDBStorage {
         const tx = db.transaction('cards', 'readonly');
         const store = tx.objectStore('cards');
         const req = store.getAll();
-        req.onsuccess = () => {
+        req.onsuccess = async () => {
           if (req.result && req.result.length > 0) {
-            const sorted = (req.result as Card[]).sort((a, b) => a.frequencyRank - b.frequencyRank);
+            let cards = req.result as Card[];
+            if (cards.length < INITIAL_CARDS.length) {
+              const existingMap = new Map(cards.map((c) => [c.id, c]));
+              const missing = INITIAL_CARDS.filter((c) => !existingMap.has(c.id));
+              if (missing.length > 0) {
+                try {
+                  const saveTx = db.transaction('cards', 'readwrite');
+                  const saveStore = saveTx.objectStore('cards');
+                  missing.forEach((c) => saveStore.put(c));
+                } catch (e) {
+                  console.warn('Error auto-merging expanded cards into IndexedDB:', e);
+                }
+                cards = [...cards, ...missing];
+              }
+            }
+            const sorted = cards.sort((a, b) => a.frequencyRank - b.frequencyRank);
             resolve(sorted);
           } else {
             // Seed initial cards

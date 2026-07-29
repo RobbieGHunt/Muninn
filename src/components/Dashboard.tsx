@@ -112,14 +112,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     );
   };
 
-  // Calculate Frequency Tier Distribution for master lexicon
+  // Calculate Frequency Tier Distribution for master lexicon (6,000 words total)
   const frequencyTiers = [
     {
       id: 'tier-core',
-      name: 'Kärnord (Top 1–50)',
+      name: 'Kärnord (Top 1–500)',
       rangeMin: 1,
-      rangeMax: 50,
-      description: 'Mest frekventa grundorden i svenska',
+      rangeMax: 500,
+      description: 'Mest frekventa grundorden i svenska (CEFR A1)',
       color: '#00D2FF',
       bgColor: 'bg-[#00D2FF]/10',
       borderColor: 'border-[#00D2FF]/30',
@@ -127,10 +127,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     },
     {
       id: 'tier-everyday',
-      name: 'Vardagsord (Top 51–200)',
-      rangeMin: 51,
-      rangeMax: 200,
-      description: 'Vanliga samtal och vardagliga uttryck',
+      name: 'Vardagsord (Top 501–1500)',
+      rangeMin: 501,
+      rangeMax: 1500,
+      description: 'Vanliga samtal och vardagliga uttryck (CEFR A2)',
       color: '#10B981',
       bgColor: 'bg-[#10B981]/10',
       borderColor: 'border-[#10B981]/30',
@@ -138,10 +138,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     },
     {
       id: 'tier-extended',
-      name: 'Utökad Vokabulär (Top 201–500)',
-      rangeMin: 201,
-      rangeMax: 500,
-      description: 'Mellannivå och nyanserade begrepp',
+      name: 'Utökad Vokabulär (Top 1501–3500)',
+      rangeMin: 1501,
+      rangeMax: 3500,
+      description: 'Mellannivå och nyanserade begrepp (CEFR B1/B2)',
       color: '#F59E0B',
       bgColor: 'bg-[#F59E0B]/10',
       borderColor: 'border-[#F59E0B]/30',
@@ -149,10 +149,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     },
     {
       id: 'tier-advanced',
-      name: 'Fördjupad (Top 501+)',
-      rangeMin: 501,
-      rangeMax: 9999,
-      description: 'Avancerad vokabulär och fackuttryck',
+      name: 'Fördjupad & Avancerad (Top 3501–6000)',
+      rangeMin: 3501,
+      rangeMax: 6000,
+      description: 'Avancerad vokabulär, litteratur och fackuttryck (CEFR C1/C2)',
       color: '#A855F7',
       bgColor: 'bg-[#A855F7]/10',
       borderColor: 'border-[#A855F7]/30',
@@ -561,7 +561,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <span>Vokabulärhorisont (Frequency Spectrum)</span>
                   </h2>
                   <p className="text-xs text-[#94A3B8] mt-0.5">
-                    Kontinuerligt frekvensspektrum från Rank 1 till 6,000+ med din aktuella position
+                    Kontinuerligt frekvensspektrum från Rank 1 till 6 000 ord med din aktuella position
                   </p>
                 </div>
                 <div className="text-right">
@@ -591,11 +591,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 {/* Multi-colored Spectrum Bar with Tier Density Shading */}
                 <div className="relative w-full h-8 rounded-xl overflow-hidden p-1 bg-[#0F172A] border border-[#263554] flex">
                   
-                  {/* Core Tier 1-50 */}
+                  {/* Core Tier 1-500 */}
                   <div
                     className="h-full bg-[#00D2FF] relative transition-all"
                     style={{ width: '15%' }}
-                    title="Kärnord (Rank 1-50)"
+                    title="Kärnord (Rank 1–500)"
                   >
                     <div
                       className="absolute inset-0 bg-[#0F172A] opacity-30"
@@ -603,11 +603,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     />
                   </div>
 
-                  {/* Everyday Tier 51-200 */}
+                  {/* Everyday Tier 501-1500 */}
                   <div
                     className="h-full bg-[#10B981] relative transition-all"
                     style={{ width: '25%' }}
-                    title="Vardagsord (Rank 51-200)"
+                    title="Vardagsord (Rank 501–1500)"
                   >
                     <div
                       className="absolute inset-0 bg-[#0F172A] opacity-30"
@@ -615,11 +615,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     />
                   </div>
 
-                  {/* Extended Tier 201-500 */}
+                  {/* Extended Tier 1501-3500 */}
                   <div
                     className="h-full bg-[#F59E0B] relative transition-all"
                     style={{ width: '30%' }}
-                    title="Utökad Vokabulär (Rank 201-500)"
+                    title="Utökad Vokabulär (Rank 1501–3500)"
                   >
                     <div
                       className="absolute inset-0 bg-[#0F172A] opacity-30"
@@ -627,11 +627,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     />
                   </div>
 
-                  {/* Advanced Tier 501+ */}
+                  {/* Advanced Tier 3501-6000 */}
                   <div
                     className="h-full bg-[#A855F7] relative transition-all"
                     style={{ width: '30%' }}
-                    title="Fördjupad (Rank 501+)"
+                    title="Fördjupad (Rank 3501–6000)"
                   >
                     <div
                       className="absolute inset-0 bg-[#0F172A] opacity-30"
@@ -643,10 +643,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 {/* Rank Markers Below Bar */}
                 <div className="flex items-center justify-between text-[11px] text-[#94A3B8] font-bold px-1">
                   <span className="text-[#00D2FF]">Rank 1</span>
-                  <span className="text-[#10B981]">Rank 50</span>
-                  <span className="text-[#F59E0B]">Rank 200</span>
-                  <span className="text-[#A855F7]">Rank 500</span>
-                  <span>Rank 6000+</span>
+                  <span className="text-[#10B981]">Rank 500</span>
+                  <span className="text-[#F59E0B]">Rank 1 500</span>
+                  <span className="text-[#A855F7]">Rank 3 500</span>
+                  <span>Rank 6 000</span>
                 </div>
               </div>
 
@@ -712,7 +712,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
                 <div className="text-right">
                   <span className="text-xs font-bold text-[#10B981] bg-[#10B981]/10 px-3 py-1 rounded-full border border-[#10B981]/30">
-                    Totalt Inlärda: {totalLearned} Ord
+                    Totalt Inlärda: {totalLearned} / 6 000 ord ({Math.round((totalLearned / (LEXICON_CARDS.length || 6000)) * 100)}%)
                   </span>
                 </div>
               </div>
@@ -943,7 +943,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
           <span className="text-xs font-bold text-[#00D2FF] bg-[#00D2FF]/10 px-3 py-1 rounded-full border border-[#00D2FF]/30">
-            Global Master Katalog ({LEXICON_CARDS.length} ord)
+            Global Master Katalog ({LEXICON_CARDS.length || 6000} ord)
           </span>
         </div>
 

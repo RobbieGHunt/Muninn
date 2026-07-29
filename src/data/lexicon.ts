@@ -1,8 +1,5 @@
 import { Card, Deck, CEFRLevel, LexiconEntry } from '../types';
-import { TIER1_FOUNDATION } from './decks/tier1_foundation';
-import { TIER2_EVERYDAY } from './decks/tier2_everyday';
-import { TIER3_FLUENT } from './decks/tier3_fluent';
-import { TIER4_MASTERY } from './decks/tier4_mastery';
+import { EXPANDED_LEXICON } from './expandedLexicon';
 
 export { TIER1_FOUNDATION } from './decks/tier1_foundation';
 export { TIER2_EVERYDAY } from './decks/tier2_everyday';
@@ -11,14 +8,9 @@ export { TIER4_MASTERY } from './decks/tier4_mastery';
 
 /**
  * MASTER LEXICON
- * Combines all multi-tier datasets ordered by frequency rank.
+ * Complete 6,000 high-frequency Swedish words database ordered by frequency rank.
  */
-export const MASTER_LEXICON: LexiconEntry[] = [
-  ...TIER1_FOUNDATION,
-  ...TIER2_EVERYDAY,
-  ...TIER3_FLUENT,
-  ...TIER4_MASTERY,
-].sort((a, b) => a.frequencyRank - b.frequencyRank);
+export const MASTER_LEXICON: LexiconEntry[] = EXPANDED_LEXICON;
 
 /**
  * Retrieves lexicon entries filtered by CEFR level.
