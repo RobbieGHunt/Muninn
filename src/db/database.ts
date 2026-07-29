@@ -120,8 +120,11 @@ export async function saveUserSettings(settings: UserSettings): Promise<void> {
 }
 
 /**
- * Fetches new cards drawn strictly in order of frequencyRank ASC (most common words first).
+ * Fetches unseen cards (state === 0) drawn strictly in order of frequencyRank ASC (most common words first).
  * Capped at dailyNewCards limit unless bonusSession is true.
+ * When bonusSession is true and a deckId is specified, draws up to 15 fresh unseen cards from the specified deck,
+ * falling back to the master lexicon pool across all decks/tiers (ordered by frequencyRank ASC)
+ * if the selected deck has fewer than 15 unseen cards.
  */
 export async function getNewCards(
   deckIdOrOptions?: string | { deckId?: string; limit?: number; bonusSession?: boolean },
@@ -145,22 +148,81 @@ export async function getNewCards(
   }
 
   let collection = db.cards.where('state').equals(0);
-  let cards = await collection.sortBy('frequencyRank');
+  let allUnseenCards = await collection.sortBy('frequencyRank');
+
   if (deckId) {
-    cards = cards.filter((c) => c.deckId === deckId);
+    const deckUnseenCards = allUnseenCards.filter((c) => c.deckId === deckId);
+    if (bonusSession) {
+      const targetLimit = limit ?? 15;
+      if (deckUnseenCards.length >= targetLimit) {
+        return deckUnseenCards.slice(0, targetLimit);
+      } else {
+        const remainingCount = targetLimit - deckUnseenCards.length;
+        const deckCardIds = new Set(deckUnseenCards.map((c) => c.id));
+        const masterFallbackCards = allUnseenCards
+          .filter((c) => !deckCardIds.has(c.id))
+          .slice(0, remainingCount);
+        return [...deckUnseenCards, ...masterFallbackCards];
+      }
+    } else {
+      let cards = deckUnseenCards;
+      if (limit !== undefined && limit > 0) {
+        return cards.slice(0, limit);
+      }
+      const settings = await getUserSettings();
+      const cap = settings.dailyNewCards;
+      return cards.slice(0, cap);
+    }
   }
 
   if (limit !== undefined && limit > 0) {
-    return cards.slice(0, limit);
+    return allUnseenCards.slice(0, limit);
   }
 
   if (bonusSession) {
-    return cards;
+    return allUnseenCards;
   }
 
   const settings = await getUserSettings();
   const cap = settings.dailyNewCards;
-  return cards.slice(0, cap);
+  return allUnseenCards.slice(0, cap);
+}
+
+/**
+ * Fetches Unseen Pool cards (state === 0), ordered strictly by frequencyRank ASC.
+ */
+export async function getUnseenCards(deckId?: string): Promise<Card[]> {
+  await seedDatabase();
+  let collection = db.cards.where('state').equals(0);
+  let cards = await collection.sortBy('frequencyRank');
+  if (deckId) {
+    cards = cards.filter((c) => c.deckId === deckId);
+  }
+  return cards;
+}
+
+/**
+ * Fetches Learning / Relearning Pool cards (state === 1 | 3).
+ */
+export async function getLearningCards(deckId?: string): Promise<Card[]> {
+  await seedDatabase();
+  let cards = await db.cards.filter((c) => c.state === 1 || c.state === 3).toArray();
+  if (deckId) {
+    cards = cards.filter((c) => c.deckId === deckId);
+  }
+  return cards;
+}
+
+/**
+ * Fetches Review Pool cards (state === 2).
+ */
+export async function getReviewCards(deckId?: string): Promise<Card[]> {
+  await seedDatabase();
+  let cards = await db.cards.where('state').equals(2).toArray();
+  if (deckId) {
+    cards = cards.filter((c) => c.deckId === deckId);
+  }
+  return cards;
 }
 
 /**

@@ -30,6 +30,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const selectedDeckCards = cards.filter((c) => c.deckId === selectedDeckId);
   const displayCards = selectedDeckCards.length > 0 ? selectedDeckCards : cards;
 
+  // Unseen cards counts
+  const totalUnseenLexicon = cards.filter((c) => c.state === 0).length;
+  const selectedDeckUnseenCount = selectedDeckCards.filter((c) => c.state === 0).length;
+
   // Calculate total learned words if not passed as explicit prop
   const totalLearned =
     wordsLearnedCount !== undefined
@@ -199,14 +203,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </span>
             </button>
 
-            <button
-              onClick={onStartBonusStudy}
-              className="min-h-[52px] px-5 py-3.5 bg-[#1E293B] hover:bg-[#263554] border border-[#00D2FF]/40 hover:border-[#00D2FF] text-white text-sm font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:shadow-[#00D2FF]/10 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
-              title="Studera ytterligare ord utöver den dagliga gränsen"
-              aria-label="Studera extra ord utöver dagliga gränsen"
-            >
-              <span>Studera extra ord 🚀</span>
-            </button>
+            <div className="flex flex-col items-center gap-1 w-full sm:w-auto">
+              <button
+                onClick={onStartBonusStudy}
+                className="w-full sm:w-auto min-h-[52px] px-5 py-3.5 bg-[#1E293B] hover:bg-[#263554] border border-[#00D2FF]/40 hover:border-[#00D2FF] text-white text-sm font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:shadow-[#00D2FF]/10 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
+                title="Studera 15 extra nya ord utöver den dagliga gränsen"
+                aria-label="Studera extra ord utöver dagliga gränsen"
+              >
+                <span>Studera extra ord 🚀</span>
+                <span className="text-xs bg-[#00D2FF]/20 text-[#00D2FF] px-2 py-0.5 rounded-full font-bold">
+                  +15 Nya
+                </span>
+              </button>
+              <span className="text-[10px] text-[#94A3B8]">
+                {selectedDeckUnseenCount > 0
+                  ? `${selectedDeckUnseenCount} oinledda i kortleken`
+                  : `${totalUnseenLexicon} oinledda i lexikonet`}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -224,11 +238,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          {/* New Cards */}
+          {/* New Cards (Unseen Pool) */}
           <div className="p-4 rounded-xl bg-[#083344]/40 border border-[#06B6D4]/30 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-bold text-[#06B6D4] uppercase tracking-wider">Nya Kort</p>
+              <p className="text-[11px] font-bold text-[#06B6D4] uppercase tracking-wider">Nya Kort (Oinledda)</p>
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-0.5">{queueStats.newCount}</p>
+              <p className="text-[10px] text-[#94A3B8] mt-0.5">
+                {totalUnseenLexicon} totalt i lexikonet
+              </p>
             </div>
             <div className="w-9 h-9 rounded-lg bg-[#06B6D4]/20 border border-[#06B6D4]/40 flex items-center justify-center text-[#06B6D4] text-base">
               ✨
@@ -438,6 +455,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             const isSelected = deck.id === selectedDeckId;
             const deckCards = cards.filter((c) => c.deckId === deck.id);
             const totalCount = deckCards.length || deck.totalCards || 0;
+            const deckUnseenCount = deckCards.filter((c) => c.state === 0).length;
 
             const minRank =
               deckCards.length > 0
@@ -484,6 +502,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="flex flex-wrap items-center justify-between mt-4 pt-3 border-t border-[#263554]/60 text-xs text-[#94A3B8] gap-2">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-white">{totalCount} kort</span>
+                    <span>•</span>
+                    <span className="text-[#06B6D4] font-semibold">{deckUnseenCount} oinledda</span>
                     <span>•</span>
                     <span className="text-[#00D2FF] font-medium">Frekvens #{minRank}–#{maxRank}</span>
                   </div>

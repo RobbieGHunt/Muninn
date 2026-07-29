@@ -106,23 +106,73 @@ class IndexedDBStorage {
     }
 
     const cards = await this.getCards();
-    let newCards = cards.filter((c) => c.state === 0);
+    const allUnseenCards = cards
+      .filter((c) => c.state === 0)
+      .sort((a, b) => a.frequencyRank - b.frequencyRank);
+
     if (deckId) {
-      newCards = newCards.filter((c) => c.deckId === deckId);
+      const deckUnseenCards = allUnseenCards.filter((c) => c.deckId === deckId);
+      if (bonusSession) {
+        const targetLimit = limit ?? 15;
+        if (deckUnseenCards.length >= targetLimit) {
+          return deckUnseenCards.slice(0, targetLimit);
+        } else {
+          const remainingCount = targetLimit - deckUnseenCards.length;
+          const deckCardIds = new Set(deckUnseenCards.map((c) => c.id));
+          const masterFallbackCards = allUnseenCards
+            .filter((c) => !deckCardIds.has(c.id))
+            .slice(0, remainingCount);
+          return [...deckUnseenCards, ...masterFallbackCards];
+        }
+      } else {
+        let resultCards = deckUnseenCards;
+        if (limit !== undefined && limit > 0) {
+          return resultCards.slice(0, limit);
+        }
+        const settings = await this.getUserSettings();
+        const cap = settings.dailyNewCards;
+        return resultCards.slice(0, cap);
+      }
     }
-    newCards.sort((a, b) => a.frequencyRank - b.frequencyRank);
 
     if (limit !== undefined && limit > 0) {
-      return newCards.slice(0, limit);
+      return allUnseenCards.slice(0, limit);
     }
 
     if (bonusSession) {
-      return newCards;
+      return allUnseenCards;
     }
 
     const settings = await this.getUserSettings();
     const cap = settings.dailyNewCards;
-    return newCards.slice(0, cap);
+    return allUnseenCards.slice(0, cap);
+  }
+
+  public async getUnseenCards(deckId?: string): Promise<Card[]> {
+    const cards = await this.getCards();
+    let unseen = cards.filter((c) => c.state === 0).sort((a, b) => a.frequencyRank - b.frequencyRank);
+    if (deckId) {
+      unseen = unseen.filter((c) => c.deckId === deckId);
+    }
+    return unseen;
+  }
+
+  public async getLearningCards(deckId?: string): Promise<Card[]> {
+    const cards = await this.getCards();
+    let learning = cards.filter((c) => c.state === 1 || c.state === 3);
+    if (deckId) {
+      learning = learning.filter((c) => c.deckId === deckId);
+    }
+    return learning;
+  }
+
+  public async getReviewCards(deckId?: string): Promise<Card[]> {
+    const cards = await this.getCards();
+    let review = cards.filter((c) => c.state === 2);
+    if (deckId) {
+      review = review.filter((c) => c.deckId === deckId);
+    }
+    return review;
   }
 
   public async saveCard(card: Card): Promise<void> {

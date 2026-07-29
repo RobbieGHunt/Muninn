@@ -3,6 +3,9 @@ import {
   db,
   seedDatabase,
   getNewCards,
+  getUnseenCards,
+  getLearningCards,
+  getReviewCards,
   clearDatabase,
   getUserSettings,
   saveUserSettings,
@@ -152,6 +155,56 @@ describe('Muninn Database Schema & Lexicon Queue Selection', () => {
     const bonusQueue = await getNewCards(undefined, undefined, true);
     expect(bonusQueue.length).toBeGreaterThan(5);
     expect(bonusQueue.length).toBe(LEXICON_CARDS.length);
+  });
+
+  it('classifies cards correctly into unseen, learning, and review pools', async () => {
+    await seedDatabase();
+    const unseen = await getUnseenCards();
+    expect(unseen.length).toBe(LEXICON_CARDS.length);
+
+    // Transition 1 card to learning state (1) and 1 card to review state (2)
+    const cards = await db.cards.limit(2).toArray();
+    cards[0].state = 1;
+    cards[1].state = 2;
+    await db.cards.bulkPut(cards);
+
+    const unseenAfter = await getUnseenCards();
+    const learning = await getLearningCards();
+    const review = await getReviewCards();
+
+    expect(unseenAfter.length).toBe(LEXICON_CARDS.length - 2);
+    expect(learning.length).toBe(1);
+    expect(learning[0].id).toBe(cards[0].id);
+    expect(review.length).toBe(1);
+    expect(review[0].id).toBe(cards[1].id);
+  });
+
+  it('pulls fresh unseen cards from master pool when selected deck has 0 unseen cards', async () => {
+    await seedDatabase();
+    const deckA1Id = 'deck-a1-core';
+
+    // Mark all cards in deck-a1-core as learned (state === 2)
+    const deckA1Cards = await db.cards.where('deckId').equals(deckA1Id).toArray();
+    deckA1Cards.forEach((c) => {
+      c.state = 2;
+    });
+    await db.cards.bulkPut(deckA1Cards);
+
+    // Verify deckA1 has 0 unseen cards
+    const deckA1Unseen = await getUnseenCards(deckA1Id);
+    expect(deckA1Unseen.length).toBe(0);
+
+    // Call getNewCards for deck-a1-core in bonus session mode
+    const bonusNewCards = await getNewCards(deckA1Id, 15, true);
+    expect(bonusNewCards.length).toBe(15);
+    bonusNewCards.forEach((card) => {
+      expect(card.state).toBe(0);
+    });
+
+    // Ensure all returned bonus cards are ordered by frequencyRank ASC
+    for (let i = 0; i < bonusNewCards.length - 1; i++) {
+      expect(bonusNewCards[i].frequencyRank).toBeLessThanOrEqual(bonusNewCards[i + 1].frequencyRank);
+    }
   });
 });
 

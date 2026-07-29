@@ -168,7 +168,7 @@ export const App: React.FC = () => {
   };
 
   // Start Bonus Study Session (Studera extra ord 🚀)
-  // Guarantees drawing 15–20 fresh unseen words from the lexicon pool
+  // Guarantees drawing 15 fresh unseen cards (state === 0) ordered by frequencyRank ASC
   const handleStartBonusStudy = () => {
     const dueReviewsOrLearning = currentDeckCards.filter((c) => {
       if (c.state === 1 || c.state === 3) return true;
@@ -176,20 +176,29 @@ export const App: React.FC = () => {
       return false;
     });
 
-    // 1. Try to find unseen cards (state === 0) in the current deck
-    let unseenCards = currentDeckCards
+    // 1. Unseen cards (state === 0) in the current deck, ordered by frequencyRank ASC
+    const selectedDeckUnseen = currentDeckCards
       .filter((c) => c.state === 0)
       .sort((a, b) => a.frequencyRank - b.frequencyRank);
 
-    // 2. If the current deck has no unseen cards left, draw unseen cards from the master lexicon pool across all tiers
-    if (unseenCards.length === 0) {
-      unseenCards = cards
-        .filter((c) => c.state === 0)
-        .sort((a, b) => a.frequencyRank - b.frequencyRank);
+    let bonusNewCards: Card[] = [];
+
+    if (selectedDeckUnseen.length >= 15) {
+      bonusNewCards = selectedDeckUnseen.slice(0, 15);
+    } else {
+      bonusNewCards = [...selectedDeckUnseen];
+      const remainingNeeded = 15 - bonusNewCards.length;
+      const selectedIds = new Set(bonusNewCards.map((c) => c.id));
+
+      // 2. Fill remaining cards from master lexicon pool across all decks/tiers (state === 0)
+      const masterPoolUnseen = cards
+        .filter((c) => c.state === 0 && !selectedIds.has(c.id))
+        .sort((a, b) => a.frequencyRank - b.frequencyRank)
+        .slice(0, remainingNeeded);
+
+      bonusNewCards = [...bonusNewCards, ...masterPoolUnseen];
     }
 
-    // Always draw 15 fresh bonus unseen cards
-    const bonusNewCards = unseenCards.slice(0, 15);
     const bonusQueue = [...dueReviewsOrLearning, ...bonusNewCards];
 
     // If all cards in the entire app are learned, fallback to lowest stability cards for review
@@ -251,10 +260,24 @@ export const App: React.FC = () => {
       lastReview: Date.now(),
     };
 
-    // Update in state
-    setCards((prev) => prev.map((c) => (c.id === updatedCard.id ? updatedCard : c)));
+    // Calculate scheduled interval in days
+    const intervalInDays = (nextDue - Date.now()) / (86400 * 1000);
+    const isSubDayInterval = intervalInDays < 1.0 || rating === 1;
 
-    // Save to IndexedDB
+    let updatedQueue = [...studyQueue];
+
+    if (isSubDayInterval) {
+      // Re-queue card to be shown again before the session finishes:
+      // Insert card 4 slots ahead or at the end of the current session queue
+      const reinsertOffset = 4;
+      const targetPosition = Math.min(studyIndex + reinsertOffset, updatedQueue.length);
+      updatedQueue.splice(targetPosition, 0, updatedCard);
+    }
+
+    setStudyQueue(updatedQueue);
+
+    // Save updated card & user stats
+    setCards((prev) => prev.map((c) => (c.id === updatedCard.id ? updatedCard : c)));
     await dbStorage.saveCard(updatedCard);
 
     // Update User Stats
@@ -275,10 +298,10 @@ export const App: React.FC = () => {
     const nextIndex = studyIndex + 1;
     setSessionCompletedCount((prev) => prev + 1);
 
-    if (nextIndex < studyQueue.length) {
+    if (nextIndex < updatedQueue.length) {
       setStudyIndex(nextIndex);
     } else {
-      // Session Completed!
+      // All cards in session have been successfully rated with interval >= 1 day!
       setCurrentView('summary');
     }
   };
