@@ -65,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
             <p className="text-xs text-[#94A3B8] font-medium hidden sm:block">
-              Svensk Spaced Repetition
+              Svenska Spaced Repetition
             </p>
           </div>
         </button>

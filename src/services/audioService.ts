@@ -11,15 +11,15 @@ export interface AudioOptions {
 
 /**
  * Sanitizes Swedish text for speech synthesis:
- * - Converts '/' (and '\', '|') to natural pauses ('... ') so slash is never pronounced as 'streck' or 'snedstreck'.
+ * - Converts '/' (and '\', '|') to natural pauses ('... ... ') so slash is never pronounced as 'streck' or 'snedstreck'.
  * - Cleans non-speech symbols while preserving Swedish letters (å, ä, ö, etc.) and basic punctuation.
  */
 export function sanitizeForSpeech(text: string): string {
   if (!text) return '';
   return text
-    // Replace slashes, backslashes, and vertical bars with a natural pause indicator '... '
-    .replace(/\s*[\/\\]+\s*/g, ' ... ')
-    .replace(/\s*\|\s*/g, ' ... ')
+    // Replace slashes, backslashes, and vertical bars with a longer natural pause indicator ' ... ... '
+    .replace(/\s*[\/\\]+\s*/g, ' ... ... ')
+    .replace(/\s*\|\s*/g, ' ... ... ')
     // Remove brackets/parentheses characters while retaining text inside
     .replace(/[\(\)\[\]\{\}]/g, ' ')
     // Remove special non-speech symbols that TTS engines read out loud
