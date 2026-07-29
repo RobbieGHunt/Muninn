@@ -194,7 +194,7 @@ export const TIER2_EVERYDAY: LexiconEntry[] = [
     gender: 'ett',
     wordClass: 'noun',
     ipa: '/ɛtː hʊˈtɛlː/',
-    exampleSv: 'Vi bökade ett rum på ett mysigt hotell.',
+    exampleSv: 'Vi bokade ett rum på ett mysigt hotell.',
     exampleEn: 'We booked a room at a cozy hotel.',
     inflections: ['ett hotell', 'hotellet', 'hotell', 'hotellen'],
   },

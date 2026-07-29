@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { AudioService } from '../services/audioService';
+import { AudioService, sanitizeTextForSpeech } from '../services/audioService';
 
 describe('AudioService', () => {
   let mockSpeechSynthesis: any;
@@ -62,10 +62,27 @@ describe('AudioService', () => {
     expect(audio.getRate()).toBe(0.5);
   });
 
-  it('speaks text with Swedish locale', async () => {
+  it('sanitizes slashes in paired terms to natural pauses (...) so TTS never pronounces "streck"', () => {
+    expect(sanitizeTextForSpeech('jag / mig')).toBe('jag... mig');
+    expect(sanitizeTextForSpeech('du / dig')).toBe('du... dig');
+    expect(sanitizeTextForSpeech('en / ett')).toBe('en... ett');
+    expect(sanitizeTextForSpeech('sin / sitt / sina')).toBe('sin... sitt... sina');
+    expect(sanitizeTextForSpeech('ett arbete / ett jobb')).toBe('ett arbete... ett jobb');
+    expect(sanitizeTextForSpeech('att ska / skola')).toBe('att ska... skola');
+  });
+
+  it('strips parenthetical metadata and annotations before speech synthesis', () => {
+    expect(sanitizeTextForSpeech('ett hus (ett-ord)')).toBe('ett hus');
+    expect(sanitizeTextForSpeech('de / dem (spoken "dom")')).toBe('de... dem');
+    expect(sanitizeTextForSpeech('inte (BIFF rule: placed after main verb)')).toBe('inte');
+  });
+
+  it('speaks sanitized text with Swedish locale', async () => {
     const audio = new AudioService();
-    await audio.speak('Tack');
+    await audio.speak('jag / mig');
     expect(mockSpeechSynthesis.speak).toHaveBeenCalled();
+    const utteranceCall = (global as any).SpeechSynthesisUtterance.mock.calls[0][0];
+    expect(utteranceCall).toBe('jag... mig');
   });
 
   it('stops ongoing speech', () => {

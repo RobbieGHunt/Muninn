@@ -195,7 +195,7 @@ export const TIER4_MASTERY: LexiconEntry[] = [
     cefrLevel: 'C2',
     wordClass: 'phrase',
     ipa: '/atː ˈkasːta ɪn ˈhanːdˌdʉːkɛn/',
-    exampleSv: 'Efter tre misslyckade försök valde teament att kasta in handduken.',
+    exampleSv: 'Efter tre misslyckade försök valde teamet att kasta in handduken.',
     exampleEn: 'After three failed attempts the team chose to throw in the towel.',
     inflections: ['kastar in handduken', 'kastade in handduken', 'kastat in handduken'],
   },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Rating, CEFRLevel } from '../types';
+import { audioService } from '../services/audioService';
 
 interface StudyCardProps {
   card: Card;
@@ -33,27 +34,17 @@ export const StudyCard: React.FC<StudyCardProps> = ({
     card.frequencyRank ?? (parseInt(card.id.replace(/\D/g, ''), 10) || currentIndex + 1);
   const cefrLevel: CEFRLevel = card.cefrLevel || 'A1';
 
-  // Audio Playback Handler with Web Speech Synthesis (sv-SE)
+  // Audio Playback Handler with Web Speech Synthesis & Sanitized Neural AI Voices
   const playAudio = useCallback(() => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-
-    window.speechSynthesis.cancel(); // Stop any ongoing speech
-    const utterance = new SpeechSynthesisUtterance(card.front);
-    utterance.lang = 'sv-SE';
-    utterance.rate = speechRate; // Applied configured speech rate
-
-    // Pick Swedish voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const svVoice = voices.find((v) => v.lang.toLowerCase().includes('sv'));
-    if (svVoice) {
-      utterance.voice = svVoice;
-    }
-
-    utterance.onstart = () => setIsPlayingAudio(true);
-    utterance.onend = () => setIsPlayingAudio(false);
-    utterance.onerror = () => setIsPlayingAudio(false);
-
-    window.speechSynthesis.speak(utterance);
+    setIsPlayingAudio(true);
+    audioService
+      .speak(card.front, {
+        rate: speechRate,
+        onStart: () => setIsPlayingAudio(true),
+        onEnd: () => setIsPlayingAudio(false),
+        onError: () => setIsPlayingAudio(false),
+      })
+      .catch(() => setIsPlayingAudio(false));
   }, [card.front, speechRate]);
 
   // Reset state when card changes

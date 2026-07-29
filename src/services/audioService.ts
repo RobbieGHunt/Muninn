@@ -8,6 +8,42 @@ export interface AudioOptions {
   onError?: (error: SpeechSynthesisErrorEvent | string) => void;
 }
 
+/**
+ * Sanitizes Swedish vocabulary strings prior to speech synthesis.
+ * Converts slashes ('/') to natural speech pauses ('... ') so the engine
+ * never pronounces slashes as 'streck' or 'snedstreck'.
+ */
+export function sanitizeTextForSpeech(text: string): string {
+  if (!text) return '';
+
+  let sanitized = text;
+
+  // 1. Remove raw IPA phonetics if enclosed in /.../ containing non-ASCII IPA symbols
+  sanitized = sanitized.replace(/\/[a-zɑ-ʒʊɵʏøɛæœɧɕŋːˈ\s/]+\//gi, '');
+
+  // 2. Remove parenthetical annotations (e.g., "(en-ord)", "(ett-ord)", "(subject)", "(spoken 'dom')")
+  sanitized = sanitized.replace(/\s*\([^)]*\)/g, '');
+  sanitized = sanitized.replace(/\s*\[[^\]]*\]/g, '');
+
+  // 3. Convert slash '/' between paired words into natural prosodic pauses "..."
+  // Handled cases: "jag / mig", "du / dig", "en / ett", "sin / sitt / sina", "ett arbete / ett jobb", "ska/skola", etc.
+  sanitized = sanitized.replace(/(\w+)\s*\/\s*(\w+)/g, '$1... $2');
+  // Second pass for triple-slashes e.g. "sin / sitt / sina" => "sin... sitt... sina"
+  sanitized = sanitized.replace(/\s*\/\s*/g, '... ');
+
+  // 4. Convert common symbols to spoken Swedish equivalents
+  sanitized = sanitized.replace(/\s*&\s*/g, ' och ');
+
+  // 5. Clean up redundant ellipsis spaces, leading/trailing punctuation except final sentence enders
+  sanitized = sanitized.replace(/\.{4,}/g, '...');
+  sanitized = sanitized.replace(/\s*\.\.\.\s*/g, '... ');
+
+  // 6. Normalize whitespace
+  sanitized = sanitized.replace(/\s+/g, ' ').trim();
+
+  return sanitized;
+}
+
 export class AudioService {
   private synth: SpeechSynthesis | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
@@ -65,6 +101,13 @@ export class AudioService {
   }
 
   /**
+   * Sanitizes input text before sending to speech synthesis engine.
+   */
+  public sanitizeText(text: string): string {
+    return sanitizeTextForSpeech(text);
+  }
+
+  /**
    * Stops any current ongoing audio speech synthesis.
    */
   public stop(): void {
@@ -93,7 +136,7 @@ export class AudioService {
   }
 
   /**
-   * Speaks Swedish text using Web Speech Synthesis.
+   * Speaks Swedish text using Web Speech Synthesis with Rikssvenska sanitization.
    */
   public speak(text: string, options: AudioOptions = {}): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -106,7 +149,13 @@ export class AudioService {
       // Stop previous utterance
       this.stop();
 
-      const utterance = new SpeechSynthesisUtterance(text);
+      const sanitizedText = this.sanitizeText(text);
+      if (!sanitizedText) {
+        if (options.onEnd) options.onEnd();
+        return resolve();
+      }
+
+      const utterance = new SpeechSynthesisUtterance(sanitizedText);
       utterance.lang = 'sv-SE';
       utterance.rate = options.rate !== undefined ? options.rate : this.defaultRate;
       utterance.pitch = options.pitch !== undefined ? options.pitch : 1.0;
