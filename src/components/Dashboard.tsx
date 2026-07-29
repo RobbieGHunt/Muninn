@@ -182,7 +182,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
               Välkommen tillbaka!
             </h1>
             <p className="text-sm sm:text-base text-[#94A3B8] max-w-lg">
-              Du har <span className="text-[#00D2FF] font-bold">{totalDueToday} kort</span> som väntar på repetition idag. Stärk din ordkunskap i svenska!
+              {totalDueToday > 0 ? (
+                <>
+                  Du har <span className="text-[#00D2FF] font-bold">{totalDueToday} kort</span> som väntar på repetition idag. Stärk din ordkunskap i svenska!
+                </>
+              ) : (
+                <>
+                  Du har slutfört alla dagens repetitioner! 🎉 Fortsätt hålla din svit levande.
+                </>
+              )}
             </p>
           </div>
 
@@ -191,34 +199,58 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <button
               onClick={onStartStudy}
               disabled={totalDueToday === 0}
-              className="min-h-[52px] px-6 py-3.5 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] text-sm sm:text-base font-extrabold rounded-xl flex items-center justify-center gap-2.5 shadow-xl shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
-              aria-label="Starta dagens repetitionssession"
+              className={`min-h-[52px] px-6 py-3.5 text-sm sm:text-base font-extrabold rounded-xl flex items-center justify-center gap-2.5 shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] ${
+                totalDueToday > 0
+                  ? 'bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98'
+                  : 'bg-[#1E293B] text-[#94A3B8] border border-[#263554] cursor-not-allowed opacity-75 shadow-none'
+              }`}
+              aria-label={totalDueToday > 0 ? 'Starta dagens repetitionssession' : 'Dagens repetition är klar'}
             >
-              <svg className="w-5 h-5 text-[#0F172A]" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-              <span>Starta Dagens Repetition</span>
-              <span className="text-xs bg-[#0F172A]/20 px-2.5 py-1 rounded-full font-bold">
-                {totalDueToday}
-              </span>
+              {totalDueToday > 0 ? (
+                <>
+                  <svg className="w-5 h-5 text-[#0F172A]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  <span>Starta Dagens Repetition</span>
+                  <span className="text-xs bg-[#0F172A]/20 px-2.5 py-1 rounded-full font-bold">
+                    {totalDueToday}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 text-[#10B981]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Dagens Repetition Klar! 🎉</span>
+                </>
+              )}
             </button>
 
             <div className="flex flex-col items-center gap-1 w-full sm:w-auto">
               <button
                 onClick={onStartBonusStudy}
-                className="w-full sm:w-auto min-h-[52px] px-5 py-3.5 bg-[#1E293B] hover:bg-[#263554] border border-[#00D2FF]/40 hover:border-[#00D2FF] text-white text-sm font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:shadow-[#00D2FF]/10 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
-                title="Studera 15 extra nya ord utöver den dagliga gränsen"
-                aria-label="Studera extra ord utöver dagliga gränsen"
+                disabled={totalUnseenLexicon === 0}
+                className={`w-full sm:w-auto min-h-[52px] px-5 py-3.5 text-sm font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] ${
+                  totalUnseenLexicon > 0
+                    ? 'bg-[#1E293B] hover:bg-[#263554] border border-[#00D2FF]/40 hover:border-[#00D2FF] text-white hover:shadow-[#00D2FF]/10 active:scale-98'
+                    : 'bg-[#1E293B] text-[#94A3B8] border border-[#263554] cursor-not-allowed opacity-75 shadow-none'
+                }`}
+                title={totalUnseenLexicon > 0 ? 'Studera 15 extra nya ord utöver den dagliga gränsen' : 'Alla ord i lexikonet är inlärda'}
+                aria-label={totalUnseenLexicon > 0 ? 'Studera extra ord utöver dagliga gränsen' : 'Alla ord i lexikonet är inlärda'}
               >
-                <span>Studera extra ord 🚀</span>
-                <span className="text-xs bg-[#00D2FF]/20 text-[#00D2FF] px-2 py-0.5 rounded-full font-bold">
-                  +15 Nya
-                </span>
+                <span>{totalUnseenLexicon > 0 ? 'Studera extra ord 🚀' : 'Alla Ord Inlärda! 🏆'}</span>
+                {totalUnseenLexicon > 0 && (
+                  <span className="text-xs bg-[#00D2FF]/20 text-[#00D2FF] px-2 py-0.5 rounded-full font-bold">
+                    +15 Nya
+                  </span>
+                )}
               </button>
               <span className="text-[10px] text-[#94A3B8]">
                 {selectedDeckUnseenCount > 0
                   ? `${selectedDeckUnseenCount} oinledda i kortleken`
-                  : `${totalUnseenLexicon} oinledda i lexikonet`}
+                  : totalUnseenLexicon > 0
+                  ? `${totalUnseenLexicon} oinledda i lexikonet`
+                  : '0 oinledda ord'}
               </span>
             </div>
           </div>

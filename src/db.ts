@@ -1,5 +1,6 @@
 import { Card, Deck, UserSettings, UserStats } from './types';
 import { LEXICON_CARDS, LEXICON_DECKS } from './data/lexicon';
+import { getTodayResetTimestamp } from './db/database';
 
 const DB_NAME = 'MuninnDB';
 const DB_VERSION = 1;
@@ -107,8 +108,11 @@ class IndexedDBStorage {
     }
 
     const cards = await this.getCards();
+    const settings = await this.getUserSettings();
+    const todayReset = getTodayResetTimestamp(settings.dayResetHour ?? 4);
+
     const allUnseenCards = cards
-      .filter((c) => c.state === 0)
+      .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
       .sort((a, b) => a.frequencyRank - b.frequencyRank);
 
     if (deckId) {
@@ -130,7 +134,6 @@ class IndexedDBStorage {
         if (limit !== undefined && limit > 0) {
           return resultCards.slice(0, limit);
         }
-        const settings = await this.getUserSettings();
         const cap = settings.dailyNewCards;
         return resultCards.slice(0, cap);
       }
@@ -144,7 +147,6 @@ class IndexedDBStorage {
       return allUnseenCards;
     }
 
-    const settings = await this.getUserSettings();
     const cap = settings.dailyNewCards;
     return allUnseenCards.slice(0, cap);
   }

@@ -163,8 +163,12 @@ export async function getNewCards(
     bonusSession = bonusSessionParam;
   }
 
+  const settings = await getUserSettings();
+  const todayReset = getTodayResetTimestamp(settings.dayResetHour ?? 4);
+
   let collection = db.cards.where('state').equals(0);
-  let allUnseenCards = await collection.sortBy('frequencyRank');
+  let rawUnseenCards = await collection.sortBy('frequencyRank');
+  let allUnseenCards = rawUnseenCards.filter((c) => !c.lastReview || c.lastReview < todayReset);
 
   if (deckId) {
     const deckUnseenCards = allUnseenCards.filter((c) => c.deckId === deckId);
@@ -185,7 +189,6 @@ export async function getNewCards(
       if (limit !== undefined && limit > 0) {
         return cards.slice(0, limit);
       }
-      const settings = await getUserSettings();
       const cap = settings.dailyNewCards;
       return cards.slice(0, cap);
     }
@@ -199,7 +202,6 @@ export async function getNewCards(
     return allUnseenCards;
   }
 
-  const settings = await getUserSettings();
   const cap = settings.dailyNewCards;
   return allUnseenCards.slice(0, cap);
 }

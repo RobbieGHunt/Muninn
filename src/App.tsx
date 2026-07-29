@@ -71,18 +71,27 @@ export const App: React.FC = () => {
 
   // Compute Queue Stats for Navbar & Dashboard
   const queueStats: QueueStats = useMemo(() => {
-    let newCount = 0;
-    let learningCount = 0;
-    let reviewCount = 0;
+    const todayReset = getTodayResetTimestamp(settings.dayResetHour ?? 4);
 
-    currentDeckCards.forEach((c) => {
-      if (c.state === 0) newCount++;
-      else if (c.state === 1 || c.state === 3) learningCount++;
-      else if (c.state === 2) reviewCount++;
-    });
+    const newCardsStudiedToday = cards.filter(
+      (c) => c.state > 0 && c.lastReview !== undefined && c.lastReview >= todayReset
+    ).length;
+    const remainingNewToday = Math.max(0, settings.dailyNewCards - newCardsStudiedToday);
 
-    return { newCount, learningCount, reviewCount };
-  }, [currentDeckCards]);
+    const dueNewCards = currentDeckCards
+      .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
+      .sort((a, b) => a.frequencyRank - b.frequencyRank)
+      .slice(0, remainingNewToday);
+
+    const dueReviews = currentDeckCards.filter((c) => c.state === 2 && c.due <= Date.now());
+    const dueLearning = currentDeckCards.filter((c) => c.state === 1 || c.state === 3);
+
+    return {
+      newCount: dueNewCards.length,
+      learningCount: dueLearning.length,
+      reviewCount: dueReviews.length,
+    };
+  }, [cards, currentDeckCards, settings.dailyNewCards, settings.dayResetHour]);
 
   // Update Settings Handler
   const handleUpdateSettings = (newSettings: Partial<UserSettings>) => {
@@ -136,27 +145,26 @@ export const App: React.FC = () => {
   const handleStartStudy = () => {
     const todayReset = getTodayResetTimestamp(settings.dayResetHour ?? 4);
 
-    // Active learning or review cards due today
-    const dueReviewsOrLearning = cards.filter((c) => {
-      if (c.state === 1 || c.state === 3) return true;
-      if (c.state === 2 && c.due <= Date.now() + 86400000) return true;
-      return false;
-    });
+    const newCardsStudiedToday = cards.filter(
+      (c) => c.state > 0 && c.lastReview !== undefined && c.lastReview >= todayReset
+    ).length;
+    const remainingNewToday = Math.max(0, settings.dailyNewCards - newCardsStudiedToday);
 
-    // Unseen cards (state === 0) that have NOT been shown/reviewed today
-    const unseenCards = cards
+    const dueNewCards = currentDeckCards
       .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
-      .sort((a, b) => a.frequencyRank - b.frequencyRank);
+      .sort((a, b) => a.frequencyRank - b.frequencyRank)
+      .slice(0, remainingNewToday);
 
-    const newCards = unseenCards.slice(0, settings.dailyNewCards);
-    const dueQueue = [...dueReviewsOrLearning, ...newCards];
+    const dueReviews = currentDeckCards.filter((c) => c.state === 2 && c.due <= Date.now());
+    const dueLearning = currentDeckCards.filter((c) => c.state === 1 || c.state === 3);
 
-    const finalQueue =
-      dueQueue.length > 0
-        ? dueQueue
-        : [...cards].sort((a, b) => a.frequencyRank - b.frequencyRank).slice(0, 15);
+    const dueQueue = [...dueLearning, ...dueReviews, ...dueNewCards];
 
-    setStudyQueue(finalQueue);
+    if (dueQueue.length === 0) {
+      return;
+    }
+
+    setStudyQueue(dueQueue);
     setStudyIndex(0);
     setSessionCompletedCount(0);
     setCurrentView('study');
@@ -167,26 +175,30 @@ export const App: React.FC = () => {
   const handleStartBonusStudy = () => {
     const todayReset = getTodayResetTimestamp(settings.dayResetHour ?? 4);
 
-    const dueReviewsOrLearning = cards.filter((c) => {
-      if (c.state === 1 || c.state === 3) return true;
-      if (c.state === 2 && c.due <= Date.now() + 86400000) return true;
-      return false;
-    });
-
     // Draw next 15 fresh unseen cards (state === 0) that have NOT been presented today
-    const freshUnseenCards = cards
+    const deckUnseenCards = currentDeckCards
       .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
-      .sort((a, b) => a.frequencyRank - b.frequencyRank)
-      .slice(0, 15);
+      .sort((a, b) => a.frequencyRank - b.frequencyRank);
 
-    const bonusQueue = [...dueReviewsOrLearning, ...freshUnseenCards];
+    let bonusQueue: Card[] = [];
+    if (deckUnseenCards.length >= 15) {
+      bonusQueue = deckUnseenCards.slice(0, 15);
+    } else {
+      const masterUnseenCards = cards
+        .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
+        .sort((a, b) => a.frequencyRank - b.frequencyRank);
+      const deckCardIds = new Set(deckUnseenCards.map((c) => c.id));
+      const masterFallbackCards = masterUnseenCards
+        .filter((c) => !deckCardIds.has(c.id))
+        .slice(0, 15 - deckUnseenCards.length);
+      bonusQueue = [...deckUnseenCards, ...masterFallbackCards];
+    }
 
-    const finalQueue =
-      bonusQueue.length > 0
-        ? bonusQueue
-        : [...cards].sort((a, b) => (a.stability || 0) - (b.stability || 0)).slice(0, 15);
+    if (bonusQueue.length === 0) {
+      return;
+    }
 
-    setStudyQueue(finalQueue);
+    setStudyQueue(bonusQueue);
     setStudyIndex(0);
     setSessionCompletedCount(0);
     setCurrentView('study');
