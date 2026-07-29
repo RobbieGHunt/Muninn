@@ -6,7 +6,10 @@ import {
   Rating,
   RatingPreview,
   ReviewLog,
+  UserSettings,
 } from '../types';
+import { getTodayResetTimestamp } from '../db/database';
+import { LEXICON_CARDS } from '../data/lexicon';
 
 export const DEFAULT_FSRS_PARAMETERS: FSRSParameters = {
   requestRetention: 0.9,
@@ -280,3 +283,65 @@ export function previewRatings(
     };
   });
 }
+
+/**
+ * Generates a bonus study queue for extra practice session ("Studera extra ord 🚀" / "Nästa N nya ord 🚀").
+ * 1. Filters unseen cards (state === 0) from selected deck, sorted strictly by frequencyRank ASC.
+ * 2. If fewer than batchSize cards, fills remaining slots with unseen cards from all other decks in LEXICON_CARDS, sorted by frequencyRank ASC.
+ * 3. If all cards in master catalog have been studied/seen (state > 0), falls back to cards with lowest stability (stability ASC).
+ */
+export function generateBonusQueue(
+  cards: Card[],
+  selectedDeckId: string,
+  settings: Partial<UserSettings> = {}
+): Card[] {
+  const batchSize = settings.bonusExtraCards ?? settings.dailyNewCards ?? 15;
+
+  const cardMap = new Map(cards.map((c) => [c.id, c]));
+
+  // Ensure master catalog is complete by combining LEXICON_CARDS with active cards
+  const lexiconIds = new Set(LEXICON_CARDS.map((c) => c.id));
+  const masterCatalog: Card[] = [
+    ...LEXICON_CARDS.map((lc) => cardMap.get(lc.id) || lc),
+    ...cards.filter((c) => !lexiconIds.has(c.id)),
+  ];
+
+  // A card is unseen if its state === 0 (New)
+  const isUnseen = (c: Card) => c.state === 0;
+
+  // 1. Unseen cards in selected deck sorted by frequencyRank ASC
+  const deckUnseenCards = masterCatalog
+    .filter((c) => (c.deckId === selectedDeckId || !c.deckId) && isUnseen(c))
+    .sort((a, b) => a.frequencyRank - b.frequencyRank);
+
+  let bonusQueue: Card[] = [];
+
+  if (deckUnseenCards.length >= batchSize) {
+    bonusQueue = deckUnseenCards.slice(0, batchSize);
+  } else {
+    bonusQueue = [...deckUnseenCards];
+
+    // 2. Fill remaining slots with unseen cards from all other decks sorted by frequencyRank ASC
+    const otherUnseenCards = masterCatalog
+      .filter((c) => isUnseen(c) && !bonusQueue.some((b) => b.id === c.id))
+      .sort((a, b) => a.frequencyRank - b.frequencyRank);
+
+    const remainingNeeded = batchSize - bonusQueue.length;
+    bonusQueue.push(...otherUnseenCards.slice(0, remainingNeeded));
+
+    // 3. Fallback: If all cards in master catalog have been studied/seen, pick cards with lowest stability (stability ASC)
+    if (bonusQueue.length < batchSize) {
+      const existingIds = new Set(bonusQueue.map((c) => c.id));
+      const lowestStabilityCards = [...masterCatalog]
+        .filter((c) => !existingIds.has(c.id))
+        .sort((a, b) => (a.stability ?? 0) - (b.stability ?? 0) || (a.due ?? 0) - (b.due ?? 0))
+        .slice(0, batchSize - bonusQueue.length);
+
+      bonusQueue.push(...lowestStabilityCards);
+    }
+  }
+
+  return bonusQueue;
+}
+
+

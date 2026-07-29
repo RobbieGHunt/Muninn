@@ -8,6 +8,7 @@ import { StudyCard } from './components/StudyCard';
 import { SettingsModal } from './components/SettingsModal';
 
 import { audioService } from './services/audioService';
+import { generateBonusQueue } from './services/fsrsService';
 
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -193,33 +194,9 @@ export const App: React.FC = () => {
   };
 
   // Start Bonus Study Session (Studera extra ord 🚀 / Nästa N Nya Ord)
-  // Always draws the NEXT batch of fresh unseen words ordered by frequencyRank ASC
+  // Constructs a bonus queue of bonusExtraCards (default 15) unseen/lowest stability cards
   const handleStartBonusStudy = () => {
-    const todayReset = getTodayResetTimestamp(settings.dayResetHour ?? 4);
-    const batchSize = settings.bonusExtraCards ?? 10;
-
-    // Get set of card IDs that have been reviewed or learned
-    const learnedCardIds = new Set(
-      cards.filter((c) => c.state > 0 || (c.lastReview !== undefined && c.lastReview >= todayReset)).map((c) => c.id)
-    );
-
-    // Filter master catalog (LEXICON_CARDS) for unseen cards strictly ordered by frequency rank
-    const unseenCards = LEXICON_CARDS
-      .filter((c) => !learnedCardIds.has(c.id))
-      .sort((a, b) => a.frequencyRank - b.frequencyRank);
-
-    let bonusQueue: Card[] = [];
-    if (unseenCards.length >= batchSize) {
-      bonusQueue = unseenCards.slice(0, batchSize);
-    } else if (unseenCards.length > 0) {
-      bonusQueue = unseenCards;
-    } else {
-      // If ALL 6,000+ words in master lexicon are learned, fall back to cards needing review
-      const sourceCards = currentDeckCards.length > 0 ? currentDeckCards : cards;
-      bonusQueue = [...sourceCards]
-        .sort((a, b) => (a.due - b.due) || (a.stability - b.stability))
-        .slice(0, batchSize);
-    }
+    const bonusQueue = generateBonusQueue(cards, selectedDeckId, settings);
 
     if (bonusQueue.length === 0) return;
 
@@ -372,8 +349,9 @@ export const App: React.FC = () => {
           />
         )}
 
-        {currentView === 'study' && studyQueue.length > 0 && (
+        {currentView === 'study' && studyQueue.length > 0 && studyIndex < studyQueue.length && studyQueue[studyIndex] && (
           <StudyCard
+            key={`${studyQueue[studyIndex]?.id || 'card'}-${studyIndex}`}
             card={studyQueue[studyIndex]}
             onRate={handleRateCard}
             totalInQueue={studyQueue.length}
@@ -421,9 +399,9 @@ export const App: React.FC = () => {
                 </button>
                 <button
                   onClick={handleStartBonusStudy}
-                  className="min-h-[48px] px-6 py-3 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] font-extrabold text-sm rounded-xl shadow-lg shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] w-full sm:w-auto"
+                  className="min-h-[48px] px-6 py-3 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] font-extrabold text-sm rounded-xl shadow-lg shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] w-full sm:w-auto cursor-pointer"
                 >
-                  Nästa {settings.bonusExtraCards ?? 10} nya ord 🚀
+                  Nästa {settings.bonusExtraCards ?? settings.dailyNewCards ?? 15} nya ord 🚀
                 </button>
               </div>
 
