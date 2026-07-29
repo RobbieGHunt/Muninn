@@ -133,24 +133,33 @@ export const App: React.FC = () => {
 
   // Start Standard Daily Study Session
   const handleStartStudy = () => {
+    // Filter due reviews / active learning cards from current deck
     const dueReviewsOrLearning = currentDeckCards.filter((c) => {
-      if (c.state === 1 || c.state === 3) return true; // Learning / Relearning
-      if (c.state === 2 && c.due <= Date.now() + 86400000) return true; // Review due within 24h
+      if (c.state === 1 || c.state === 3) return true;
+      if (c.state === 2 && c.due <= Date.now() + 86400000) return true;
       return false;
     });
 
-    const newCards = currentDeckCards
+    // 1. First attempt to draw unseen cards (state === 0) from the selected deck
+    let unseenCards = currentDeckCards
       .filter((c) => c.state === 0)
-      .sort((a, b) => a.frequencyRank - b.frequencyRank)
-      .slice(0, settings.dailyNewCards);
+      .sort((a, b) => a.frequencyRank - b.frequencyRank);
 
+    // 2. If the selected deck has no remaining unseen cards, pull unseen cards from the global pool across all tiers
+    if (unseenCards.length === 0) {
+      unseenCards = cards
+        .filter((c) => c.state === 0)
+        .sort((a, b) => a.frequencyRank - b.frequencyRank);
+    }
+
+    const newCards = unseenCards.slice(0, settings.dailyNewCards);
     const dueQueue = [...dueReviewsOrLearning, ...newCards];
 
-    // If queue empty, fall back to all cards sorted by frequencyRank ASC for demo review
+    // If queue empty, fall back to next available cards sorted by frequencyRank ASC
     const finalQueue =
       dueQueue.length > 0
         ? dueQueue
-        : [...currentDeckCards].sort((a, b) => a.frequencyRank - b.frequencyRank);
+        : [...cards].sort((a, b) => a.frequencyRank - b.frequencyRank).slice(0, 15);
 
     setStudyQueue(finalQueue);
     setStudyIndex(0);
@@ -159,6 +168,7 @@ export const App: React.FC = () => {
   };
 
   // Start Bonus Study Session (Studera extra ord 🚀)
+  // Guarantees drawing 15–20 fresh unseen words from the lexicon pool
   const handleStartBonusStudy = () => {
     const dueReviewsOrLearning = currentDeckCards.filter((c) => {
       if (c.state === 1 || c.state === 3) return true;
@@ -166,18 +176,27 @@ export const App: React.FC = () => {
       return false;
     });
 
-    // Draw extra new cards beyond the daily limit (+20 extra cards for bonus)
-    const bonusNewCards = currentDeckCards
+    // 1. Try to find unseen cards (state === 0) in the current deck
+    let unseenCards = currentDeckCards
       .filter((c) => c.state === 0)
-      .sort((a, b) => a.frequencyRank - b.frequencyRank)
-      .slice(0, settings.dailyNewCards + 20);
+      .sort((a, b) => a.frequencyRank - b.frequencyRank);
 
+    // 2. If the current deck has no unseen cards left, draw unseen cards from the master lexicon pool across all tiers
+    if (unseenCards.length === 0) {
+      unseenCards = cards
+        .filter((c) => c.state === 0)
+        .sort((a, b) => a.frequencyRank - b.frequencyRank);
+    }
+
+    // Always draw 15 fresh bonus unseen cards
+    const bonusNewCards = unseenCards.slice(0, 15);
     const bonusQueue = [...dueReviewsOrLearning, ...bonusNewCards];
 
+    // If all cards in the entire app are learned, fallback to lowest stability cards for review
     const finalQueue =
       bonusQueue.length > 0
         ? bonusQueue
-        : [...currentDeckCards].sort((a, b) => a.frequencyRank - b.frequencyRank);
+        : [...cards].sort((a, b) => (a.stability || 0) - (b.stability || 0)).slice(0, 15);
 
     setStudyQueue(finalQueue);
     setStudyIndex(0);
