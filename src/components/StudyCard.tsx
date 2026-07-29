@@ -210,13 +210,13 @@ export const StudyCard: React.FC<StudyCardProps> = ({
     if (items.length === 0) return null;
 
     return (
-      <div className="pt-1">
-        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-1">
+      <div className="pt-1.5">
+        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-1.5">
           Böjningsformer
         </span>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {items.map((form, i) => (
-            <span key={i} className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#1E293B] text-[#94A3B8] border border-[#263554] shadow-sm">
+            <span key={i} className="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-md bg-[#1E293B] text-[#94A3B8] border border-[#263554] shadow-sm">
               {form}
             </span>
           ))}
@@ -226,7 +226,7 @@ export const StudyCard: React.FC<StudyCardProps> = ({
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 h-[calc(100vh-140px)] min-h-[460px] max-h-[640px] flex flex-col justify-between overflow-hidden my-auto">
+    <div className="w-full max-w-2xl mx-auto px-4 h-[calc(100vh-110px)] min-h-[520px] max-h-[780px] flex flex-col justify-between overflow-hidden my-auto">
       
       {/* Top Card Queue Progress Indicator */}
       <div className="flex items-center justify-between text-xs font-semibold text-[#94A3B8] pb-2 flex-shrink-0 px-1">
@@ -244,7 +244,7 @@ export const StudyCard: React.FC<StudyCardProps> = ({
         <div className={`flip-card-inner w-full flex-1 flex flex-col transition-transform duration-500 transform-style-3d ${isFlipped ? 'is-flipped' : ''}`}>
           
           {/* ================= FRONT SIDE ================= */}
-          <div className="flip-card-front bg-[#161F33]/90 border border-[#263554] rounded-2xl p-4 sm:p-6 flex flex-col justify-between h-full shadow-2xl backdrop-blur-md relative overflow-hidden">
+          <div className="flip-card-front bg-[#161F33]/90 border border-[#263554] rounded-2xl p-5 sm:p-6 flex flex-col justify-between h-full shadow-2xl backdrop-blur-md relative overflow-hidden">
             
             {/* Top Bar: Grammar Gender Badge, CEFR Badge, Frequency Pill & Audio Button */}
             <div className="flex items-center justify-between w-full gap-2 flex-shrink-0">
@@ -303,19 +303,19 @@ export const StudyCard: React.FC<StudyCardProps> = ({
           </div>
 
           {/* ================= BACK SIDE ================= */}
-          <div className="flip-card-back bg-[#161F33]/90 border border-[#263554] rounded-2xl p-4 sm:p-6 flex flex-col justify-between h-full shadow-2xl backdrop-blur-md relative overflow-hidden">
+          <div className="flip-card-back bg-[#161F33]/90 border border-[#263554] rounded-2xl p-5 sm:p-6 flex flex-col justify-between h-full shadow-2xl backdrop-blur-md relative overflow-hidden">
             
             {/* Top Header Bar */}
-            <div className="flex items-center justify-between w-full pb-2 border-b border-[#263554]/60 gap-2 flex-shrink-0">
+            <div className="flex items-center justify-between w-full pb-3 border-b border-[#263554]/60 gap-3 flex-shrink-0">
               <div className="text-left flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-xl sm:text-2xl font-extrabold text-white truncate">{card.front}</h2>
                   {renderGenderPill()}
                   {renderCefrBadge(cefrLevel)}
                   {renderFrequencyPill(frequencyRank)}
                 </div>
                 {card.ipa && (
-                  <p className="text-xs font-mono text-[#00D2FF]/90 mt-0.5">{card.ipa}</p>
+                  <p className="text-xs font-mono text-[#00D2FF]/90 mt-1">{card.ipa}</p>
                 )}
               </div>
 
@@ -336,30 +336,30 @@ export const StudyCard: React.FC<StudyCardProps> = ({
               </button>
             </div>
 
-            {/* Translation & Content Details (Scales answer text-lg sm:text-xl for NO-SCROLL ergonomics) */}
-            <div className="text-left my-auto space-y-2.5 flex-1 min-h-0 overflow-y-auto py-2">
+            {/* Translation & Content Details (Scales answer text for NO-SCROLL ergonomics) */}
+            <div className="text-left my-auto space-y-3 sm:space-y-4 flex-1 min-h-0 overflow-y-auto py-3">
               
               {/* Primary English Meaning */}
               <div>
-                <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block">
+                <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-0.5">
                   Engelsk Översättning
                 </span>
-                <p className="text-lg sm:text-xl font-extrabold text-[#00D2FF] tracking-tight">
+                <p className="text-xl sm:text-2xl font-extrabold text-[#00D2FF] tracking-tight">
                   {card.back}
                 </p>
               </div>
 
               {/* Context Example Sentence */}
               {card.exampleSv && (
-                <div className="p-3 rounded-xl bg-[#0F172A]/80 border border-[#263554]">
-                  <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-0.5">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-[#0F172A]/80 border border-[#263554] shadow-sm">
+                  <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">
                     Exempelmening
                   </span>
-                  <p className="text-sm sm:text-base font-medium leading-normal">
+                  <p className="text-sm sm:text-base font-medium leading-relaxed">
                     {renderHighlightedExample(card.exampleSv, card.front)}
                   </p>
                   {card.exampleEn && (
-                    <p className="text-xs text-[#94A3B8] italic mt-1">
+                    <p className="text-xs sm:text-sm text-[#94A3B8] italic mt-1.5">
                       "{card.exampleEn}"
                     </p>
                   )}
@@ -372,12 +372,12 @@ export const StudyCard: React.FC<StudyCardProps> = ({
             </div>
 
             {/* Bottom: 4 FSRS Rating Buttons (48px+ touch targets) */}
-            <div className="w-full pt-2.5 border-t border-[#263554]/60 space-y-1.5 flex-shrink-0">
+            <div className="w-full pt-3 border-t border-[#263554]/60 space-y-2 flex-shrink-0">
               <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest block text-center">
                 Hur väl kom du ihåg ordet?
               </span>
               
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {/* 1 - AGAIN (Coral Red) */}
                 <button
                   onClick={() => onRate(1)}
@@ -428,7 +428,7 @@ export const StudyCard: React.FC<StudyCardProps> = ({
               </div>
 
               {/* Keyboard Hints Legend */}
-              <div className="text-[10px] text-[#94A3B8] pt-0.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
+              <div className="text-[10px] text-[#94A3B8] pt-1 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1">
                 <span><kbd className="px-1 rounded bg-[#0F172A]">1</kbd> Igen</span>
                 <span><kbd className="px-1 rounded bg-[#0F172A]">2</kbd> Svårt</span>
                 <span><kbd className="px-1 rounded bg-[#0F172A]">3</kbd> Bra</span>
