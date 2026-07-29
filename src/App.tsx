@@ -9,7 +9,7 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [cards, setCards] = useState<Card[]>(INITIAL_CARDS);
   const [decks] = useState<Deck[]>(DEFAULT_DECKS);
-  const [selectedDeckId, setSelectedDeckId] = useState<string>('deck-a1-grund');
+  const [selectedDeckId, setSelectedDeckId] = useState<string>('deck-a1-core');
   const [userStats, setUserStats] = useState<UserStats>(INITIAL_USER_STATS);
   const [currentView, setCurrentView] = useState<'dashboard' | 'study' | 'summary'>('dashboard');
   
@@ -57,16 +57,22 @@ export const App: React.FC = () => {
 
   // Start Study Session
   const handleStartStudy = () => {
-    // Filter due cards or cards in learning/new state
-    const dueQueue = currentDeckCards.filter(c => {
-      if (c.state === 0) return true; // New
+    const dueReviewsOrLearning = currentDeckCards.filter(c => {
       if (c.state === 1 || c.state === 3) return true; // Learning / Relearning
       if (c.state === 2 && c.due <= Date.now() + 86400000) return true; // Review due within 24h
       return false;
     });
 
-    // If queue empty, fall back to all cards for demo review
-    const finalQueue = dueQueue.length > 0 ? dueQueue : currentDeckCards;
+    const newCards = currentDeckCards
+      .filter(c => c.state === 0)
+      .sort((a, b) => a.frequencyRank - b.frequencyRank);
+
+    const dueQueue = [...dueReviewsOrLearning, ...newCards];
+
+    // If queue empty, fall back to all cards sorted by frequencyRank ASC for demo review
+    const finalQueue = dueQueue.length > 0
+      ? dueQueue
+      : [...currentDeckCards].sort((a, b) => a.frequencyRank - b.frequencyRank);
 
     setStudyQueue(finalQueue);
     setStudyIndex(0);
@@ -148,7 +154,9 @@ export const App: React.FC = () => {
     }
   };
 
-  const currentDeckTitle = decks.find(d => d.id === selectedDeckId)?.title || 'Svenska';
+  const currentDeck = decks.find(d => d.id === selectedDeckId);
+  const currentDeckTitle = currentDeck?.title || 'Svenska';
+  const currentDeckCefr = currentDeck?.cefrLevel || 'A1';
 
   if (loading) {
     return (
@@ -169,6 +177,7 @@ export const App: React.FC = () => {
         currentView={currentView === 'summary' ? 'dashboard' : currentView}
         onNavigate={(view) => setCurrentView(view)}
         deckTitle={currentDeckTitle}
+        cefrLevel={currentDeckCefr}
       />
 
       {/* Main View Area */}
@@ -181,6 +190,7 @@ export const App: React.FC = () => {
             selectedDeckId={selectedDeckId}
             onSelectDeck={(id) => setSelectedDeckId(id)}
             onStartStudy={handleStartStudy}
+            cards={cards}
           />
         )}
 

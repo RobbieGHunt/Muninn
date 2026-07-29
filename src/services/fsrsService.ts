@@ -133,20 +133,26 @@ export function calculateForgetStability(
  * Creates a brand new Card object ready to be added to IndexedDB.
  */
 export function createDefaultCard(
-  deckId: number,
+  deckId: number | string,
   front: string,
   back: string,
   phonetic?: string,
   example?: string,
-  tags?: string[]
+  tags?: string[],
+  frequencyRank: number = 1,
+  cefrLevel: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' = 'A1'
 ): Card {
   const now = new Date();
   return {
-    deckId,
+    id: `card-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    deckId: String(deckId),
     front,
     back,
-    phonetic,
-    example,
+    ipa: phonetic,
+    exampleSv: example,
+    wordClass: 'substantiv',
+    frequencyRank,
+    cefrLevel,
     state: CardState.New,
     stability: 0,
     difficulty: 0,
@@ -154,9 +160,7 @@ export function createDefaultCard(
     scheduledDays: 0,
     reps: 0,
     lapses: 0,
-    due: now,
-    createdAt: now,
-    tags: tags || [],
+    due: now.getTime(),
   };
 }
 
@@ -225,21 +229,22 @@ export function scheduleCard(
     scheduledDays: intervalDays,
     reps,
     lapses,
-    due: nextDue,
-    lastReview: now,
+    due: nextDue.getTime(),
+    lastReview: now.getTime(),
   };
 
   const reviewLog: ReviewLog = {
-    cardId: card.id || 0,
+    id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    cardId: String(card.id || ''),
     rating,
     state: card.state,
-    due: card.due,
+    due: typeof card.due === 'number' ? card.due : new Date(card.due).getTime(),
     stability: updatedCard.stability,
     difficulty: updatedCard.difficulty,
     elapsedDays: Math.round(elapsedDays),
     lastElapsedDays: card.elapsedDays,
     scheduledDays: intervalDays,
-    review: now,
+    reviewTimestamp: now.getTime(),
   };
 
   return {
