@@ -192,45 +192,36 @@ export const App: React.FC = () => {
     setCurrentView('study');
   };
 
-  // Start Bonus Study Session (Studera extra ord 🚀)
-  // Allows studying new words an arbitrary number of times per day without repeating today's shown cards
+  // Start Bonus Study Session (Studera extra ord 🚀 / Nästa N Nya Ord)
+  // Always draws the NEXT batch of fresh unseen words ordered by frequencyRank ASC
   const handleStartBonusStudy = () => {
     const todayReset = getTodayResetTimestamp(settings.dayResetHour ?? 4);
-    const batchSize = settings.bonusExtraCards ?? 15;
+    const batchSize = settings.bonusExtraCards ?? 10;
 
-    // Draw fresh unseen cards from active deck
-    const deckUnseenCards = currentDeckCards
-      .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
+    // Get set of card IDs that have been reviewed or learned
+    const learnedCardIds = new Set(
+      cards.filter((c) => c.state > 0 || (c.lastReview !== undefined && c.lastReview >= todayReset)).map((c) => c.id)
+    );
+
+    // Filter master catalog (LEXICON_CARDS) for unseen cards strictly ordered by frequency rank
+    const unseenCards = LEXICON_CARDS
+      .filter((c) => !learnedCardIds.has(c.id))
       .sort((a, b) => a.frequencyRank - b.frequencyRank);
 
     let bonusQueue: Card[] = [];
-    if (deckUnseenCards.length >= batchSize) {
-      bonusQueue = deckUnseenCards.slice(0, batchSize);
+    if (unseenCards.length >= batchSize) {
+      bonusQueue = unseenCards.slice(0, batchSize);
+    } else if (unseenCards.length > 0) {
+      bonusQueue = unseenCards;
     } else {
-      const masterUnseenCards = cards
-        .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
-        .sort((a, b) => a.frequencyRank - b.frequencyRank);
-      const deckCardIds = new Set(deckUnseenCards.map((c) => c.id));
-      const masterFallbackCards = masterUnseenCards
-        .filter((c) => !deckCardIds.has(c.id))
-        .slice(0, batchSize - deckUnseenCards.length);
-
-      bonusQueue = [...deckUnseenCards, ...masterFallbackCards];
-
-      if (bonusQueue.length < batchSize) {
-        const existingIds = new Set(bonusQueue.map((c) => c.id));
-        const lowestStabilityCards = cards
-          .filter((c) => !existingIds.has(c.id))
-          .sort((a, b) => a.stability - b.stability)
-          .slice(0, batchSize - bonusQueue.length);
-
-        bonusQueue = [...bonusQueue, ...lowestStabilityCards];
-      }
+      // If ALL 6,000+ words in master lexicon are learned, fall back to cards needing review
+      const sourceCards = currentDeckCards.length > 0 ? currentDeckCards : cards;
+      bonusQueue = [...sourceCards]
+        .sort((a, b) => (a.due - b.due) || (a.stability - b.stability))
+        .slice(0, batchSize);
     }
 
-    if (bonusQueue.length === 0) {
-      return;
-    }
+    if (bonusQueue.length === 0) return;
 
     setStudyQueue(bonusQueue);
     setStudyIndex(0);
@@ -302,7 +293,13 @@ export const App: React.FC = () => {
     setStudyQueue(updatedQueue);
 
     // Save updated card & user stats
-    setCards((prev) => prev.map((c) => (c.id === updatedCard.id ? updatedCard : c)));
+    setCards((prev) => {
+      const exists = prev.some((c) => c.id === updatedCard.id);
+      if (exists) {
+        return prev.map((c) => (c.id === updatedCard.id ? updatedCard : c));
+      }
+      return [...prev, updatedCard];
+    });
     await dbStorage.saveCard(updatedCard);
 
     // Update User Stats
@@ -358,8 +355,8 @@ export const App: React.FC = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
-      {/* Main View Area */}
-      <main className="flex-1 pb-12">
+      {/* Main Container */}
+      <main className="flex-1">
         {currentView === 'dashboard' && (
           <Dashboard
             queueStats={queueStats}
@@ -371,6 +368,7 @@ export const App: React.FC = () => {
             onStartBonusStudy={handleStartBonusStudy}
             cards={cards}
             wordsLearnedCount={wordsLearnedCount}
+            settings={settings}
           />
         )}
 
@@ -397,14 +395,14 @@ export const App: React.FC = () => {
               <div>
                 <h1 className="text-3xl font-extrabold text-white">Utmärkt Jobbat!</h1>
                 <p className="text-sm text-[#94A3B8] mt-2">
-                  Du har slutfört din repetitionssession för <span className="text-[#00D2FF] font-bold">{currentDeckTitle}</span>.
+                  Du har slutfört din studie-session för <span className="text-[#00D2FF] font-bold">{currentDeckTitle}</span>.
                 </p>
               </div>
 
               {/* Session Stats Summary Card */}
               <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-[#0F172A] border border-[#263554]">
                 <div>
-                  <p className="text-[10px] font-bold text-[#64748B] uppercase">Repeterade Kort</p>
+                  <p className="text-[10px] font-bold text-[#64748B] uppercase">Studerade Kort</p>
                   <p className="text-2xl font-extrabold text-[#00D2FF]">{sessionCompletedCount}</p>
                 </div>
                 <div>
@@ -417,15 +415,15 @@ export const App: React.FC = () => {
               <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
                 <button
                   onClick={() => setCurrentView('dashboard')}
-                  className="min-h-[48px] px-6 py-3 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] font-extrabold text-sm rounded-xl shadow-lg shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] w-full sm:w-auto"
+                  className="min-h-[48px] px-6 py-3 bg-[#161F33] hover:bg-[#263554] border border-[#263554] text-white text-sm font-bold rounded-xl transition-all active:scale-98 focus:outline-none focus:ring-2 focus:ring-[#00D2FF] w-full sm:w-auto"
                 >
                   Tillbaka till Instrumentbrädan
                 </button>
                 <button
-                  onClick={handleStartStudy}
-                  className="min-h-[48px] px-6 py-3 bg-[#161F33] hover:bg-[#263554] border border-[#263554] text-white text-sm font-bold rounded-xl transition-all active:scale-98 focus:outline-none focus:ring-2 focus:ring-[#00D2FF] w-full sm:w-auto"
+                  onClick={handleStartBonusStudy}
+                  className="min-h-[48px] px-6 py-3 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] font-extrabold text-sm rounded-xl shadow-lg shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] w-full sm:w-auto"
                 >
-                  Studera Igen 🔄
+                  Nästa {settings.bonusExtraCards ?? 10} nya ord 🚀
                 </button>
               </div>
 
