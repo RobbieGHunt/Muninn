@@ -40,12 +40,13 @@ export const StudyCard: React.FC<StudyCardProps> = ({
     audioService
       .speak(card.front, {
         rate: speechRate,
+        audioUrl: card.audioUrl,
         onStart: () => setIsPlayingAudio(true),
         onEnd: () => setIsPlayingAudio(false),
         onError: () => setIsPlayingAudio(false),
       })
       .catch(() => setIsPlayingAudio(false));
-  }, [card.front, speechRate]);
+  }, [card.front, card.audioUrl, speechRate]);
 
   // Reset state when card changes
   useEffect(() => {

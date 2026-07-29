@@ -3,50 +3,83 @@ export interface AudioOptions {
   pitch?: number; // 0.5 to 1.5 (default 1.0)
   volume?: number; // 0.0 to 1.0 (default 1.0)
   voiceName?: string;
+  audioUrl?: string; // Pre-rendered audio URL/path
   onStart?: () => void;
   onEnd?: () => void;
-  onError?: (error: SpeechSynthesisErrorEvent | string) => void;
+  onError?: (error: SpeechSynthesisErrorEvent | Event | string) => void;
 }
 
 /**
- * Sanitizes Swedish vocabulary strings prior to speech synthesis.
- * Converts slashes ('/') to natural speech pauses ('... ') so the engine
- * never pronounces slashes as 'streck' or 'snedstreck'.
+ * Sanitizes Swedish text for speech synthesis:
+ * - Converts '/' (and '\', '|') to natural pauses ('... ') so slash is never pronounced as 'streck' or 'snedstreck'.
+ * - Cleans non-speech symbols while preserving Swedish letters (å, ä, ö, etc.) and basic punctuation.
  */
-export function sanitizeTextForSpeech(text: string): string {
+export function sanitizeForSpeech(text: string): string {
   if (!text) return '';
+  return text
+    // Replace slashes, backslashes, and vertical bars with a natural pause indicator '... '
+    .replace(/\s*[\/\\]+\s*/g, ' ... ')
+    .replace(/\s*\|\s*/g, ' ... ')
+    // Remove brackets/parentheses characters while retaining text inside
+    .replace(/[\(\)\[\]\{\}]/g, ' ')
+    // Remove special non-speech symbols that TTS engines read out loud
+    .replace(/["'“”«»#$%\*+=\<\>~@_^]/g, ' ')
+    // Clean up multiple dots or spaces (preserving the intentional '... ' pauses)
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  let sanitized = text;
+/**
+ * Selects the highest quality available Swedish voice based on a preference hierarchy:
+ * 1. Microsoft Sofie Neural
+ * 2. Microsoft Mattias Neural
+ * 3. Other Neural / Natural AI Swedish voices
+ * 4. Google svenska
+ * 5. Standard Swedish voices (Alva, Klarafono, Oskar, etc.)
+ */
+export function getPreferredSwedishVoice(
+  voices: SpeechSynthesisVoice[],
+  requestedVoiceName?: string
+): SpeechSynthesisVoice | null {
+  if (!voices || voices.length === 0) return null;
 
-  // 1. Remove raw IPA phonetics if enclosed in /.../ containing non-ASCII IPA symbols
-  sanitized = sanitized.replace(/\/[a-zɑ-ʒʊɵʏøɛæœɧɕŋːˈ\s/]+\//gi, '');
+  if (requestedVoiceName) {
+    const exactMatch = voices.find((v) => v.name === requestedVoiceName);
+    if (exactMatch) return exactMatch;
+    const partialMatch = voices.find((v) =>
+      v.name.toLowerCase().includes(requestedVoiceName.toLowerCase())
+    );
+    if (partialMatch) return partialMatch;
+  }
 
-  // 2. Remove parenthetical annotations (e.g., "(en-ord)", "(ett-ord)", "(subject)", "(spoken 'dom')")
-  sanitized = sanitized.replace(/\s*\([^)]*\)/g, '');
-  sanitized = sanitized.replace(/\s*\[[^\]]*\]/g, '');
+  const swedishVoices = voices.filter(
+    (v) => v.lang.toLowerCase().startsWith('sv') || v.lang.toLowerCase().includes('sv')
+  );
 
-  // 3. Convert slash '/' between paired words into natural prosodic pauses "..."
-  // Handled cases: "jag / mig", "du / dig", "en / ett", "sin / sitt / sina", "ett arbete / ett jobb", "ska/skola", etc.
-  sanitized = sanitized.replace(/(\w+)\s*\/\s*(\w+)/g, '$1... $2');
-  // Second pass for triple-slashes e.g. "sin / sitt / sina" => "sin... sitt... sina"
-  sanitized = sanitized.replace(/\s*\/\s*/g, '... ');
+  if (swedishVoices.length === 0) return null;
 
-  // 4. Convert common symbols to spoken Swedish equivalents
-  sanitized = sanitized.replace(/\s*&\s*/g, ' och ');
+  const scoreVoice = (v: SpeechSynthesisVoice): number => {
+    const name = v.name.toLowerCase();
+    const isNeural = name.includes('neural') || name.includes('natural') || name.includes('online');
 
-  // 5. Clean up redundant ellipsis spaces, leading/trailing punctuation except final sentence enders
-  sanitized = sanitized.replace(/\.{4,}/g, '...');
-  sanitized = sanitized.replace(/\s*\.\.\.\s*/g, '... ');
+    if (name.includes('sofie') && isNeural) return 100;
+    if (name.includes('mattias') && isNeural) return 90;
+    if (name.includes('sofie')) return 85;
+    if (name.includes('mattias')) return 80;
+    if (isNeural) return 75;
+    if (name.includes('google') && (name.includes('svenska') || v.lang.toLowerCase().includes('sv'))) return 70;
+    if (name.includes('alva') || name.includes('klarafono') || name.includes('oskar')) return 60;
+    if (v.lang.toLowerCase() === 'sv-se') return 50;
+    return 10;
+  };
 
-  // 6. Normalize whitespace
-  sanitized = sanitized.replace(/\s+/g, ' ').trim();
-
-  return sanitized;
+  return swedishVoices.slice().sort((a, b) => scoreVoice(b) - scoreVoice(a))[0] || swedishVoices[0];
 }
 
 export class AudioService {
   private synth: SpeechSynthesis | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private currentAudio: HTMLAudioElement | null = null;
   private defaultRate: number = 1.0;
   private voices: SpeechSynthesisVoice[] = [];
 
@@ -87,6 +120,21 @@ export class AudioService {
   }
 
   /**
+   * Returns the best available Swedish voice based on Neural/Natural AI hierarchy.
+   */
+  public getBestSwedishVoice(requestedVoiceName?: string): SpeechSynthesisVoice | null {
+    this.loadVoices();
+    return getPreferredSwedishVoice(this.voices, requestedVoiceName);
+  }
+
+  /**
+   * Helper function exposed on the class instance.
+   */
+  public sanitizeForSpeech(text: string): string {
+    return sanitizeForSpeech(text);
+  }
+
+  /**
    * Sets default speech rate (e.g. 0.8 for slower pronunciation practice, 1.0 for standard speed).
    */
   public setRate(rate: number): void {
@@ -101,16 +149,14 @@ export class AudioService {
   }
 
   /**
-   * Sanitizes input text before sending to speech synthesis engine.
-   */
-  public sanitizeText(text: string): string {
-    return sanitizeTextForSpeech(text);
-  }
-
-  /**
-   * Stops any current ongoing audio speech synthesis.
+   * Stops any current ongoing audio playback (both HTML Audio and Web Speech Synthesis).
    */
   public stop(): void {
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
+    }
     if (this.synth) {
       this.synth.cancel();
       this.currentUtterance = null;
@@ -121,6 +167,9 @@ export class AudioService {
    * Pauses current audio playback.
    */
   public pause(): void {
+    if (this.currentAudio && !this.currentAudio.paused) {
+      this.currentAudio.pause();
+    }
     if (this.synth && this.synth.speaking) {
       this.synth.pause();
     }
@@ -130,70 +179,112 @@ export class AudioService {
    * Resumes paused audio playback.
    */
   public resume(): void {
+    if (this.currentAudio && this.currentAudio.paused) {
+      this.currentAudio.play().catch(() => {});
+    }
     if (this.synth && this.synth.paused) {
       this.synth.resume();
     }
   }
 
   /**
-   * Speaks Swedish text using Web Speech Synthesis with Rikssvenska sanitization.
+   * Speaks text or plays audio. If audioUrl is provided, attempts pre-rendered audio playback
+   * with seamless fallback to Web Speech Synthesis using sanitized text.
    */
   public speak(text: string, options: AudioOptions = {}): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (!this.isSupported() || !this.synth) {
-        const errorMsg = 'Web Speech API is not supported in this browser environment.';
-        if (options.onError) options.onError(errorMsg);
-        return reject(new Error(errorMsg));
-      }
-
-      // Stop previous utterance
       this.stop();
 
-      const sanitizedText = this.sanitizeText(text);
-      if (!sanitizedText) {
-        if (options.onEnd) options.onEnd();
-        return resolve();
+      const sanitized = sanitizeForSpeech(text);
+
+      if (options.audioUrl && typeof Audio !== 'undefined') {
+        const audio = new Audio(options.audioUrl);
+        const rate = options.rate !== undefined ? options.rate : this.defaultRate;
+        audio.playbackRate = rate;
+        audio.volume = options.volume !== undefined ? options.volume : 1.0;
+
+        let hasStarted = false;
+
+        audio.onplay = () => {
+          hasStarted = true;
+          if (options.onStart) options.onStart();
+        };
+
+        audio.onended = () => {
+          this.currentAudio = null;
+          if (options.onEnd) options.onEnd();
+          resolve();
+        };
+
+        const handleAudioError = (_errEvent: Event | string) => {
+          this.currentAudio = null;
+          // Fall back seamlessly to Web Speech Synthesis
+          this.speakUtterance(sanitized, options, resolve, reject, hasStarted);
+        };
+
+        audio.onerror = (e) => handleAudioError(e);
+
+        this.currentAudio = audio;
+
+        audio.play().catch((err) => {
+          handleAudioError(err);
+        });
+        return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(sanitizedText);
-      utterance.lang = 'sv-SE';
-      utterance.rate = options.rate !== undefined ? options.rate : this.defaultRate;
-      utterance.pitch = options.pitch !== undefined ? options.pitch : 1.0;
-      utterance.volume = options.volume !== undefined ? options.volume : 1.0;
-
-      // Voice selection
-      const swedishVoices = this.getSwedishVoices();
-      if (options.voiceName) {
-        const matchingVoice = this.voices.find((v) => v.name === options.voiceName);
-        if (matchingVoice) utterance.voice = matchingVoice;
-      } else if (swedishVoices.length > 0) {
-        // Pick preferred sv-SE voice if available
-        const preferredVoice =
-          swedishVoices.find(
-            (v) => v.lang === 'sv-SE' || v.name.includes('Alva') || v.name.includes('Klarafono')
-          ) || swedishVoices[0];
-        utterance.voice = preferredVoice;
-      }
-
-      utterance.onstart = () => {
-        if (options.onStart) options.onStart();
-      };
-
-      utterance.onend = () => {
-        this.currentUtterance = null;
-        if (options.onEnd) options.onEnd();
-        resolve();
-      };
-
-      utterance.onerror = (event) => {
-        this.currentUtterance = null;
-        if (options.onError) options.onError(event);
-        reject(event);
-      };
-
-      this.currentUtterance = utterance;
-      this.synth.speak(utterance);
+      this.speakUtterance(sanitized, options, resolve, reject, false);
     });
+  }
+
+  /**
+   * Internal helper to execute SpeechSynthesisUtterance playback.
+   */
+  private speakUtterance(
+    text: string,
+    options: AudioOptions,
+    resolve: () => void,
+    reject: (reason?: any) => void,
+    alreadyTriggeredStart: boolean = false
+  ): void {
+    if (!this.isSupported() || !this.synth) {
+      const errorMsg = 'Web Speech API is not supported in this browser environment.';
+      if (options.onError) options.onError(errorMsg);
+      return reject(new Error(errorMsg));
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'sv-SE';
+    utterance.rate = options.rate !== undefined ? options.rate : this.defaultRate;
+    utterance.pitch = options.pitch !== undefined ? options.pitch : 1.0;
+    utterance.volume = options.volume !== undefined ? options.volume : 1.0;
+
+    // Neural/Natural AI Voice selection
+    this.loadVoices();
+    const selectedVoice = getPreferredSwedishVoice(this.voices, options.voiceName);
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+
+    utterance.onstart = () => {
+      if (!alreadyTriggeredStart && options.onStart) {
+        options.onStart();
+      }
+    };
+
+    utterance.onend = () => {
+      this.currentUtterance = null;
+      if (options.onEnd) options.onEnd();
+      resolve();
+    };
+
+    utterance.onerror = (event) => {
+      this.currentUtterance = null;
+      if (options.onError) options.onError(event);
+      reject(event);
+    };
+
+    this.currentUtterance = utterance;
+    this.synth.speak(utterance);
   }
 }
 
