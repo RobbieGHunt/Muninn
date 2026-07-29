@@ -192,9 +192,7 @@ export const StudyCard: React.FC<StudyCardProps> = ({
         )}
       </span>
     );
-  };
-
-  // Safe helper to render Inflection Breakdown pills
+  };  // Safe helper to render Inflection Breakdown pills
   const renderInflectionPills = () => {
     if (!card.inflections) return null;
 
@@ -210,13 +208,13 @@ export const StudyCard: React.FC<StudyCardProps> = ({
     if (items.length === 0) return null;
 
     return (
-      <div className="pt-1.5">
-        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-1.5">
+      <div className="pt-2">
+        <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">
           Böjningsformer
         </span>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {items.map((form, i) => (
-            <span key={i} className="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-md bg-[#1E293B] text-[#94A3B8] border border-[#263554] shadow-sm">
+            <span key={i} className="text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-lg bg-[#1E293B] text-[#CBD5E1] border border-[#263554] shadow-sm">
               {form}
             </span>
           ))}
@@ -244,60 +242,62 @@ export const StudyCard: React.FC<StudyCardProps> = ({
         <div className={`flip-card-inner w-full flex-1 flex flex-col transition-transform duration-500 transform-style-3d ${isFlipped ? 'is-flipped' : ''}`}>
           
           {/* ================= FRONT SIDE ================= */}
-          <div className="flip-card-front bg-[#161F33]/90 border border-[#263554] rounded-2xl p-5 sm:p-6 flex flex-col justify-between h-full shadow-2xl backdrop-blur-md relative overflow-hidden">
-            
-            {/* Top Bar: Grammar Gender Badge, CEFR Badge, Frequency Pill & Audio Button */}
-            <div className="flex items-center justify-between w-full gap-2 flex-shrink-0">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {renderGenderPill()}
-                {renderCefrBadge(cefrLevel)}
-                {renderFrequencyPill(frequencyRank)}
-              </div>
+          <div className="flip-card-front flex flex-col items-center justify-center h-full">
+            <div className="w-full bg-[#161F33]/90 border border-[#263554] rounded-2xl p-5 sm:p-6 flex flex-col shadow-2xl backdrop-blur-md relative overflow-hidden">
               
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  playAudio();
-                }}
-                className={`w-11 h-11 rounded-full bg-[#0F172A] border border-[#263554] hover:border-[#00D2FF] text-[#00D2FF] flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-95 shadow-md flex-shrink-0 ${
-                  isPlayingAudio ? 'ring-2 ring-[#00D2FF] animate-pulse bg-[#00D2FF]/20' : ''
-                }`}
-                title="Lyssna på uttal (Tangentswitch: R)"
-                aria-label="Spela uttal för ordet"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                </svg>
-              </button>
-            </div>
+              {/* Top Bar: Grammar Gender Badge, CEFR Badge, Frequency Pill & Audio Button */}
+              <div className="flex items-center justify-between w-full gap-2 flex-shrink-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {renderGenderPill()}
+                  {renderCefrBadge(cefrLevel)}
+                  {renderFrequencyPill(frequencyRank)}
+                </div>
+                
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    playAudio();
+                  }}
+                  className={`w-11 h-11 rounded-full bg-[#0F172A] border border-[#263554] hover:border-[#00D2FF] text-[#00D2FF] flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-95 shadow-md flex-shrink-0 ${
+                    isPlayingAudio ? 'ring-2 ring-[#00D2FF] animate-pulse bg-[#00D2FF]/20' : ''
+                  }`}
+                  title="Lyssna på uttal (Tangentswitch: R)"
+                  aria-label="Spela uttal för ordet"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  </svg>
+                </button>
+              </div>
 
-            {/* Center Focal Point: Swedish Target Word (Scales text-3xl sm:text-4xl for NO-SCROLL fit) */}
-            <div className="my-auto py-4 flex flex-col items-center justify-center text-center flex-1 min-h-0 overflow-y-auto">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight select-none drop-shadow-md">
-                {card.front}
-              </h1>
-              {card.ipa && (
-                <p className="mt-2 text-base sm:text-lg font-mono text-[#00D2FF]/90 tracking-wide font-medium">
-                  {card.ipa}
-                </p>
-              )}
-            </div>
+              {/* Center Focal Point: Swedish Target Word (Tight, compact vertical height) */}
+              <div className="py-6 sm:py-8 flex flex-col items-center justify-center text-center">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight select-none drop-shadow-md">
+                  {card.front}
+                </h1>
+                {card.ipa && (
+                  <p className="mt-2 text-base sm:text-lg font-mono text-[#00D2FF]/90 tracking-wide font-medium">
+                    {card.ipa}
+                  </p>
+                )}
+              </div>
 
-            {/* Bottom Action: Reveal Answer */}
-            <div className="w-full pt-3 border-t border-[#263554]/60 flex flex-col items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => setIsFlipped(true)}
-                className="w-full min-h-[48px] py-3 px-6 rounded-xl bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] font-extrabold text-sm sm:text-base shadow-lg shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] flex items-center justify-center gap-2"
-                aria-label="Visa svar på kortet (Mellanslag)"
-              >
-                <span>Visa Svar</span>
-                <kbd className="bg-[#0F172A]/30 text-[#0F172A] border-[#0F172A]/20 text-xs px-2 py-0.5 rounded">Mellanslag</kbd>
-              </button>
+              {/* Bottom Action: Reveal Answer */}
+              <div className="w-full pt-3 border-t border-[#263554]/60 flex flex-col items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => setIsFlipped(true)}
+                  className="w-full min-h-[48px] py-3 px-6 rounded-xl bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] font-extrabold text-sm sm:text-base shadow-lg shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] flex items-center justify-center gap-2"
+                  aria-label="Visa svar på kortet (Mellanslag)"
+                >
+                  <span>Visa Svar</span>
+                  <kbd className="bg-[#0F172A]/30 text-[#0F172A] border-[#0F172A]/20 text-xs px-2 py-0.5 rounded">Mellanslag</kbd>
+                </button>
 
-              <div className="text-[11px] text-[#94A3B8] flex items-center gap-2">
-                <span><kbd className="px-1.5 py-0.5 rounded bg-[#0F172A] text-white">Space</kbd> Visa svar</span>
-                <span>•</span>
-                <span><kbd className="px-1.5 py-0.5 rounded bg-[#0F172A] text-white">R</kbd> Uttal</span>
+                <div className="text-[11px] text-[#94A3B8] flex items-center gap-2">
+                  <span><kbd className="px-1.5 py-0.5 rounded bg-[#0F172A] text-white">Space</kbd> Visa svar</span>
+                  <span>•</span>
+                  <span><kbd className="px-1.5 py-0.5 rounded bg-[#0F172A] text-white">R</kbd> Uttal</span>
+                </div>
               </div>
             </div>
           </div>
@@ -336,30 +336,30 @@ export const StudyCard: React.FC<StudyCardProps> = ({
               </button>
             </div>
 
-            {/* Translation & Content Details (Scales answer text for NO-SCROLL ergonomics) */}
-            <div className="text-left my-auto space-y-3 sm:space-y-4 flex-1 min-h-0 overflow-y-auto py-3">
+            {/* Translation & Content Details (Expanded layout for maximum space and readability) */}
+            <div className="text-left my-auto space-y-4 sm:space-y-5 flex-1 flex flex-col justify-around min-h-0 overflow-y-auto py-3">
               
               {/* Primary English Meaning */}
               <div>
-                <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-0.5">
+                <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block mb-1">
                   Engelsk Översättning
                 </span>
-                <p className="text-xl sm:text-2xl font-extrabold text-[#00D2FF] tracking-tight">
+                <p className="text-2xl sm:text-3xl font-extrabold text-[#00D2FF] tracking-tight">
                   {card.back}
                 </p>
               </div>
 
               {/* Context Example Sentence */}
               {card.exampleSv && (
-                <div className="p-3.5 sm:p-4 rounded-xl bg-[#0F172A]/80 border border-[#263554] shadow-sm">
-                  <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">
+                <div className="p-4 sm:p-5 rounded-xl bg-[#0F172A]/80 border border-[#263554] shadow-sm space-y-2">
+                  <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block">
                     Exempelmening
                   </span>
-                  <p className="text-sm sm:text-base font-medium leading-relaxed">
+                  <p className="text-base sm:text-lg font-medium leading-relaxed">
                     {renderHighlightedExample(card.exampleSv, card.front)}
                   </p>
                   {card.exampleEn && (
-                    <p className="text-xs sm:text-sm text-[#94A3B8] italic mt-1.5">
+                    <p className="text-xs sm:text-sm text-[#94A3B8] italic">
                       "{card.exampleEn}"
                     </p>
                   )}

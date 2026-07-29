@@ -446,11 +446,9 @@ export const App: React.FC = () => {
       {/* Footer */}
       <footer className="w-full border-t border-[#263554]/60 py-4 text-center text-xs text-[#64748B]">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>© {new Date().getFullYear()} Muninn — Svensk Spaced Repetition Design System</p>
+          <p>Muninn — Svensk Spaced Repetition • v1.2.0 (a072555)</p>
           <div className="flex items-center gap-4">
             <span className="hover:text-[#94A3B8] transition-colors cursor-pointer">Nordic Dusk Theme</span>
-            <span>•</span>
-            <span className="hover:text-[#94A3B8] transition-colors cursor-pointer">WCAG 2.1 AA Compliant</span>
           </div>
         </div>
       </footer>
