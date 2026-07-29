@@ -71,6 +71,7 @@ export interface UserSettings {
   dailyReviewLimit: number;
   speechRate: number;
   autoPlayAudio: boolean;
+  dayResetHour: number; // Hour of day when SRS day resets (0-23, default 4 for 04:00 AM)
 }
 
 export interface LexiconEntry {

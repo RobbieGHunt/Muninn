@@ -7,7 +7,22 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   dailyReviewLimit: 100,
   speechRate: 1.0,
   autoPlayAudio: true,
+  dayResetHour: 4, // Default 04:00 AM reset
 };
+
+/**
+ * Calculates the Unix timestamp for the start of the current SRS day based on dayResetHour.
+ * E.g., if dayResetHour is 4 (04:00 AM) and current time is 02:30 AM on July 29, 
+ * the current SRS day started at 04:00 AM on July 28.
+ */
+export function getTodayResetTimestamp(dayResetHour: number = 4, now: Date = new Date()): number {
+  const resetDate = new Date(now);
+  if (resetDate.getHours() < dayResetHour) {
+    resetDate.setDate(resetDate.getDate() - 1);
+  }
+  resetDate.setHours(dayResetHour, 0, 0, 0);
+  return resetDate.getTime();
+}
 
 export class MuninnDatabase extends Dexie {
   decks!: Table<Deck, string>;
@@ -64,6 +79,7 @@ export class MuninnDatabase extends Dexie {
       dailyReviewLimit: record.dailyReviewLimit ?? DEFAULT_USER_SETTINGS.dailyReviewLimit,
       speechRate: record.speechRate ?? DEFAULT_USER_SETTINGS.speechRate,
       autoPlayAudio: record.autoPlayAudio ?? DEFAULT_USER_SETTINGS.autoPlayAudio,
+      dayResetHour: record.dayResetHour ?? DEFAULT_USER_SETTINGS.dayResetHour,
     };
   }
 

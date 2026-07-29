@@ -16,7 +16,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   streak,
   currentView,
   onNavigate,
-  deckTitle = 'Svenska A1/A2 Grundord',
+  deckTitle = 'Svenska Samlingslek',
   cefrLevel = 'A1',
   onOpenSettings,
 }) => {

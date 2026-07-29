@@ -443,75 +443,79 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       </div>
 
-      {/* ================= DECKS SELECTION SECTION ================= */}
+      {/* ================= CEFR CATEGORY PROGRESS CARDS ================= */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-extrabold text-white tracking-tight">Dina Kortlekar</h2>
-          <span className="text-xs text-[#94A3B8]">{decks.length} tillgängliga kortlekar</span>
+          <div>
+            <h2 className="text-xl font-extrabold text-white tracking-tight">CEFR-Nivåer & Inlärningsframsteg</h2>
+            <p className="text-xs text-[#94A3B8] mt-0.5">
+              Samlad svensk vokabulär uppdelad efter Europarådets nivåskala (A1–C2)
+            </p>
+          </div>
+          <span className="text-xs font-bold text-[#00D2FF] bg-[#00D2FF]/10 px-3 py-1 rounded-full border border-[#00D2FF]/30">
+            Frekvenssorterad samlingslek
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {decks.map((deck) => {
-            const isSelected = deck.id === selectedDeckId;
-            const deckCards = cards.filter((c) => c.deckId === deck.id);
-            const totalCount = deckCards.length || deck.totalCards || 0;
-            const deckUnseenCount = deckCards.filter((c) => c.state === 0).length;
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {cefrLevels.map((lvl) => {
+            const lvlCards = cards.filter((c) => (c.cefrLevel || 'A1').toUpperCase() === lvl);
+            const total = lvlCards.length;
+            const learned = lvlCards.filter((c) => c.state > 0).length;
+            const reviewed = lvlCards.filter((c) => c.state === 2).length;
+            const unseen = lvlCards.filter((c) => c.state === 0).length;
+            const percent = total > 0 ? Math.round((learned / total) * 100) : 0;
 
-            const minRank =
-              deckCards.length > 0
-                ? Math.min(...deckCards.map((c) => c.frequencyRank ?? 1))
-                : 1;
-            const maxRank =
-              deckCards.length > 0
-                ? Math.max(...deckCards.map((c) => c.frequencyRank ?? 100))
-                : 100;
+            const lvlDescriptions: Record<string, string> = {
+              A1: 'Nybörjare — Kärnord & vardagsfraser',
+              A2: 'Grundläggande — Vanliga samtal & uttryck',
+              B1: 'Självständig — Praktisk vardagsnytta',
+              B2: 'Fördjupad — Nyanserad samtalston',
+              C1: 'Kompetent — Akademisk & professionell',
+              C2: 'Flytande — Idiom & infödd precision',
+            };
+
+            const statusBadge =
+              percent === 100
+                ? { label: 'Behärskad 🎉', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' }
+                : learned > 0
+                ? { label: 'Pågår 🔄', color: 'bg-amber-500/20 text-amber-300 border-amber-500/40' }
+                : { label: 'Kommande ⏳', color: 'bg-[#161F33] text-[#94A3B8] border-[#263554]' };
 
             return (
               <div
-                key={deck.id}
-                onClick={() => onSelectDeck(deck.id)}
-                className={`p-5 rounded-2xl cursor-pointer transition-all border ${
-                  isSelected
-                    ? 'border-[#00D2FF] bg-[#161F33] ring-1 ring-[#00D2FF]/50 shadow-xl shadow-[#00D2FF]/10'
-                    : 'bg-[#161F33]/80 border-[#263554] hover:border-[#00D2FF]/60 hover:bg-[#161F33]'
-                }`}
-                tabIndex={0}
-                role="button"
-                aria-pressed={isSelected}
-                aria-label={`Välj kortlek ${deck.title}`}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onSelectDeck(deck.id);
-                  }
-                }}
+                key={lvl}
+                className="p-5 rounded-2xl bg-[#161F33]/90 border border-[#263554] space-y-4 shadow-xl hover:border-[#00D2FF]/60 transition-all"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-[#0F172A] border border-[#263554] flex items-center justify-center text-2xl shadow-inner">
-                      {deck.icon || '🇸🇪'}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      {renderCefrBadge(lvl)}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusBadge.color}`}>
+                        {statusBadge.label}
+                      </span>
                     </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white">{deck.title}</h3>
-                      <p className="text-xs text-[#94A3B8] mt-0.5">{deck.description}</p>
-                    </div>
+                    <p className="text-xs text-[#94A3B8] font-medium pt-1">
+                      {lvlDescriptions[lvl]}
+                    </p>
                   </div>
-                  {renderCefrBadge(deck.cefrLevel)}
+                  <div className="text-right">
+                    <span className="text-2xl font-black text-white">{percent}%</span>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between mt-4 pt-3 border-t border-[#263554]/60 text-xs text-[#94A3B8] gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white">{totalCount} kort</span>
-                    <span>•</span>
-                    <span className="text-[#06B6D4] font-semibold">{deckUnseenCount} oinledda</span>
-                    <span>•</span>
-                    <span className="text-[#00D2FF] font-medium">Frekvens #{minRank}–#{maxRank}</span>
+                {/* CEFR Progress Bar */}
+                <div className="space-y-1">
+                  <div className="w-full bg-[#0F172A] h-2.5 rounded-full overflow-hidden p-0.5 border border-[#263554]">
+                    <div
+                      className="bg-gradient-to-r from-[#00D2FF] to-[#10B981] h-full rounded-full transition-all duration-700"
+                      style={{ width: `${percent}%` }}
+                    />
                   </div>
-                  {isSelected && (
-                    <span className="text-[#00D2FF] font-bold flex items-center gap-1">
-                      ✓ Vald kortlek
-                    </span>
-                  )}
+                  <div className="flex items-center justify-between text-[11px] text-[#94A3B8] font-semibold pt-1">
+                    <span>{learned} inlärda ({reviewed} behärskade)</span>
+                    <span className="text-[#06B6D4]">{unseen} oinledda</span>
+                  </div>
                 </div>
               </div>
             );

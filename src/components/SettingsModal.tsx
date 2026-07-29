@@ -182,6 +182,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <hr className="border-[#263554]/60" />
 
+          {/* ================= DAY RESET TIME SELECTOR ================= */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <label htmlFor="day-reset-select" className="text-sm font-bold text-white block">
+                  Dagsåterställningstid (SRS-dygn)
+                </label>
+                <p className="text-xs text-[#94A3B8]">
+                  Tidpunkten då nya ord och repetitioner förnyas varje dag
+                </p>
+              </div>
+              <span className="text-sm font-extrabold text-[#F59E0B] bg-[#F59E0B]/10 px-3 py-1 rounded-lg border border-[#F59E0B]/30">
+                kl. {String(settings.dayResetHour ?? 4).padStart(2, '0')}:00
+              </span>
+            </div>
+
+            <select
+              id="day-reset-select"
+              value={settings.dayResetHour ?? 4}
+              onChange={(e) => onUpdateSettings({ dayResetHour: parseInt(e.target.value, 10) })}
+              className="w-full min-h-[44px] px-3 py-2 bg-[#0F172A] border border-[#263554] rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
+              aria-label="Välj dagsåterställningstid"
+            >
+              <option value={0}>00:00 (Midnatt)</option>
+              <option value={2}>02:00 (Tidig natt)</option>
+              <option value={4}>04:00 (Standard natt - rekommenderat)</option>
+              <option value={5}>05:00 (Morgon)</option>
+              <option value={6}>06:00 (Morgon)</option>
+            </select>
+          </div>
+
+          <hr className="border-[#263554]/60" />
+
           {/* ================= SPEECH RATE SLIDER ================= */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">

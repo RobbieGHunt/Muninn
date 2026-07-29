@@ -12,6 +12,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   dailyReviewLimit: 100,
   speechRate: 1.0,
   autoPlayAudio: true,
+  dayResetHour: 4, // Default 04:00 AM reset
 };
 
 export const INITIAL_USER_STATS: UserStats = {

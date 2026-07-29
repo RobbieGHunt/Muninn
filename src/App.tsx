@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Deck, QueueStats, Rating, UserStats, UserSettings } from './types';
 import { dbStorage, DEFAULT_DECKS, INITIAL_CARDS, INITIAL_USER_STATS } from './db';
+import { getTodayResetTimestamp } from './db/database';
 import { Navbar } from './components/Navbar';
 import { Dashboard } from './components/Dashboard';
 import { StudyCard } from './components/StudyCard';
@@ -133,29 +134,23 @@ export const App: React.FC = () => {
 
   // Start Standard Daily Study Session
   const handleStartStudy = () => {
-    // Filter due reviews / active learning cards from current deck
-    const dueReviewsOrLearning = currentDeckCards.filter((c) => {
+    const todayReset = getTodayResetTimestamp(settings.dayResetHour ?? 4);
+
+    // Active learning or review cards due today
+    const dueReviewsOrLearning = cards.filter((c) => {
       if (c.state === 1 || c.state === 3) return true;
       if (c.state === 2 && c.due <= Date.now() + 86400000) return true;
       return false;
     });
 
-    // 1. First attempt to draw unseen cards (state === 0) from the selected deck
-    let unseenCards = currentDeckCards
-      .filter((c) => c.state === 0)
+    // Unseen cards (state === 0) that have NOT been shown/reviewed today
+    const unseenCards = cards
+      .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
       .sort((a, b) => a.frequencyRank - b.frequencyRank);
-
-    // 2. If the selected deck has no remaining unseen cards, pull unseen cards from the global pool across all tiers
-    if (unseenCards.length === 0) {
-      unseenCards = cards
-        .filter((c) => c.state === 0)
-        .sort((a, b) => a.frequencyRank - b.frequencyRank);
-    }
 
     const newCards = unseenCards.slice(0, settings.dailyNewCards);
     const dueQueue = [...dueReviewsOrLearning, ...newCards];
 
-    // If queue empty, fall back to next available cards sorted by frequencyRank ASC
     const finalQueue =
       dueQueue.length > 0
         ? dueQueue
@@ -168,40 +163,24 @@ export const App: React.FC = () => {
   };
 
   // Start Bonus Study Session (Studera extra ord 🚀)
-  // Guarantees drawing 15 fresh unseen cards (state === 0) ordered by frequencyRank ASC
+  // Allows studying new words an arbitrary number of times per day without repeating today's shown cards
   const handleStartBonusStudy = () => {
-    const dueReviewsOrLearning = currentDeckCards.filter((c) => {
+    const todayReset = getTodayResetTimestamp(settings.dayResetHour ?? 4);
+
+    const dueReviewsOrLearning = cards.filter((c) => {
       if (c.state === 1 || c.state === 3) return true;
       if (c.state === 2 && c.due <= Date.now() + 86400000) return true;
       return false;
     });
 
-    // 1. Unseen cards (state === 0) in the current deck, ordered by frequencyRank ASC
-    const selectedDeckUnseen = currentDeckCards
-      .filter((c) => c.state === 0)
-      .sort((a, b) => a.frequencyRank - b.frequencyRank);
+    // Draw next 15 fresh unseen cards (state === 0) that have NOT been presented today
+    const freshUnseenCards = cards
+      .filter((c) => c.state === 0 && (!c.lastReview || c.lastReview < todayReset))
+      .sort((a, b) => a.frequencyRank - b.frequencyRank)
+      .slice(0, 15);
 
-    let bonusNewCards: Card[] = [];
+    const bonusQueue = [...dueReviewsOrLearning, ...freshUnseenCards];
 
-    if (selectedDeckUnseen.length >= 15) {
-      bonusNewCards = selectedDeckUnseen.slice(0, 15);
-    } else {
-      bonusNewCards = [...selectedDeckUnseen];
-      const remainingNeeded = 15 - bonusNewCards.length;
-      const selectedIds = new Set(bonusNewCards.map((c) => c.id));
-
-      // 2. Fill remaining cards from master lexicon pool across all decks/tiers (state === 0)
-      const masterPoolUnseen = cards
-        .filter((c) => c.state === 0 && !selectedIds.has(c.id))
-        .sort((a, b) => a.frequencyRank - b.frequencyRank)
-        .slice(0, remainingNeeded);
-
-      bonusNewCards = [...bonusNewCards, ...masterPoolUnseen];
-    }
-
-    const bonusQueue = [...dueReviewsOrLearning, ...bonusNewCards];
-
-    // If all cards in the entire app are learned, fallback to lowest stability cards for review
     const finalQueue =
       bonusQueue.length > 0
         ? bonusQueue
