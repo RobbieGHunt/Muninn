@@ -8,7 +8,9 @@ interface DashboardProps {
   selectedDeckId: string;
   onSelectDeck: (deckId: string) => void;
   onStartStudy: () => void;
+  onStartBonusStudy: () => void;
   cards?: Card[];
+  wordsLearnedCount?: number;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -18,13 +20,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
   selectedDeckId,
   onSelectDeck,
   onStartStudy,
-  cards = []
+  onStartBonusStudy,
+  cards = [],
+  wordsLearnedCount,
 }) => {
   const totalDueToday = queueStats.newCount + queueStats.learningCount + queueStats.reviewCount;
 
   // Selected deck cards
-  const selectedDeckCards = cards.filter(c => c.deckId === selectedDeckId);
+  const selectedDeckCards = cards.filter((c) => c.deckId === selectedDeckId);
   const displayCards = selectedDeckCards.length > 0 ? selectedDeckCards : cards;
+
+  // Calculate total learned words if not passed as explicit prop
+  const totalLearned =
+    wordsLearnedCount !== undefined
+      ? wordsLearnedCount
+      : cards.filter((c) => c.state === 2).length;
 
   // Generate GitHub-style heatmap data for 12 weeks (84 days)
   const generateHeatmapDays = () => {
@@ -79,7 +89,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       color: '#00D2FF',
       bgColor: 'bg-[#00D2FF]/10',
       borderColor: 'border-[#00D2FF]/30',
-      progressColor: 'from-[#00D2FF] to-[#3A7BD5]'
+      progressColor: 'from-[#00D2FF] to-[#3A7BD5]',
     },
     {
       id: 'tier-everyday',
@@ -90,7 +100,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       color: '#10B981',
       bgColor: 'bg-[#10B981]/10',
       borderColor: 'border-[#10B981]/30',
-      progressColor: 'from-[#10B981] to-[#06B6D4]'
+      progressColor: 'from-[#10B981] to-[#06B6D4]',
     },
     {
       id: 'tier-extended',
@@ -101,7 +111,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       color: '#F59E0B',
       bgColor: 'bg-[#F59E0B]/10',
       borderColor: 'border-[#F59E0B]/30',
-      progressColor: 'from-[#F59E0B] to-[#F97316]'
+      progressColor: 'from-[#F59E0B] to-[#F97316]',
     },
     {
       id: 'tier-advanced',
@@ -112,20 +122,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
       color: '#A855F7',
       bgColor: 'bg-[#A855F7]/10',
       borderColor: 'border-[#A855F7]/30',
-      progressColor: 'from-[#A855F7] to-[#EC4899]'
-    }
+      progressColor: 'from-[#A855F7] to-[#EC4899]',
+    },
   ];
 
   // Helper to compute stats for each tier
-  const tierStats = frequencyTiers.map(tier => {
-    const tierCards = displayCards.filter(c => {
+  const tierStats = frequencyTiers.map((tier) => {
+    const tierCards = displayCards.filter((c) => {
       const rank = c.frequencyRank ?? (parseInt(c.id.replace(/\D/g, ''), 10) || 1);
       return rank >= tier.rangeMin && rank <= tier.rangeMax;
     });
     const total = tierCards.length;
-    const reviewed = tierCards.filter(c => c.state === 2).length;
-    const learning = tierCards.filter(c => c.state === 1 || c.state === 3).length;
-    const newCount = tierCards.filter(c => c.state === 0).length;
+    const reviewed = tierCards.filter((c) => c.state === 2).length;
+    const learning = tierCards.filter((c) => c.state === 1 || c.state === 3).length;
+    const newCount = tierCards.filter((c) => c.state === 0).length;
     const percent = total > 0 ? Math.round((reviewed / total) * 100) : 0;
 
     return {
@@ -134,19 +144,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
       reviewed,
       learning,
       newCount,
-      percent
+      percent,
     };
   });
 
   // Calculate overall CEFR level progress stats
   const cefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-  const cefrStats = cefrLevels.map(lvl => {
-    const lvlCards = displayCards.filter(c => (c.cefrLevel || 'A1').toUpperCase() === lvl);
-    const total = lvlCards.length;
-    const reviewed = lvlCards.filter(c => c.state === 2).length;
-    const percent = total > 0 ? Math.round((reviewed / total) * 100) : 0;
-    return { level: lvl, total, reviewed, percent };
-  }).filter(s => s.total > 0);
+  const cefrStats = cefrLevels
+    .map((lvl) => {
+      const lvlCards = displayCards.filter((c) => (c.cefrLevel || 'A1').toUpperCase() === lvl);
+      const total = lvlCards.length;
+      const reviewed = lvlCards.filter((c) => c.state === 2).length;
+      const percent = total > 0 ? Math.round((reviewed / total) * 100) : 0;
+      return { level: lvl, total, reviewed, percent };
+    })
+    .filter((s) => s.total > 0);
 
   return (
     <div className="nordic-container space-y-8 py-6 px-4 sm:px-6 max-w-6xl mx-auto">
@@ -159,7 +171,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              {renderCefrBadge(decks.find(d => d.id === selectedDeckId)?.cefrLevel || 'A1')}
+              {renderCefrBadge(decks.find((d) => d.id === selectedDeckId)?.cefrLevel || 'A1')}
               <span className="text-xs text-[#94A3B8] font-semibold">Vald Kortlek & CEFR</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
@@ -170,11 +182,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </p>
           </div>
 
+          {/* Action Buttons: Main Daily Study + Bonus Extra Session */}
           <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={onStartStudy}
               disabled={totalDueToday === 0}
-              className="min-h-[52px] px-8 py-4 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] text-base font-extrabold rounded-xl flex items-center justify-center gap-3 shadow-xl shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
+              className="min-h-[52px] px-6 py-3.5 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] text-sm sm:text-base font-extrabold rounded-xl flex items-center justify-center gap-2.5 shadow-xl shadow-[#00D2FF]/20 hover:brightness-110 active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
               aria-label="Starta dagens repetitionssession"
             >
               <svg className="w-5 h-5 text-[#0F172A]" fill="currentColor" viewBox="0 0 24 24">
@@ -185,19 +198,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 {totalDueToday}
               </span>
             </button>
+
+            <button
+              onClick={onStartBonusStudy}
+              className="min-h-[52px] px-5 py-3.5 bg-[#1E293B] hover:bg-[#263554] border border-[#00D2FF]/40 hover:border-[#00D2FF] text-white text-sm font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-lg hover:shadow-[#00D2FF]/10 active:scale-98 transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF]"
+              title="Studera ytterligare ord utöver den dagliga gränsen"
+              aria-label="Studera extra ord utöver dagliga gränsen"
+            >
+              <span>Studera extra ord 🚀</span>
+            </button>
           </div>
         </div>
 
-        {/* QUEUE METRICS GRID */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 pt-6 border-t border-[#263554]/60">
+        {/* QUEUE METRICS GRID (4 Columns including Total Words Learned) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-8 pt-6 border-t border-[#263554]/60">
           
+          {/* Words Learned Metric Card */}
+          <div className="p-4 rounded-xl bg-[#0F172A]/80 border border-[#00D2FF]/30 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-[#00D2FF] uppercase tracking-wider">Ord Inlärda</p>
+              <p className="text-2xl sm:text-3xl font-black text-white mt-0.5">{totalLearned}</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-[#00D2FF]/15 border border-[#00D2FF]/30 flex items-center justify-center text-[#00D2FF] text-base">
+              🎓
+            </div>
+          </div>
+
           {/* New Cards */}
           <div className="p-4 rounded-xl bg-[#083344]/40 border border-[#06B6D4]/30 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-[#06B6D4] uppercase tracking-wider">Nya Kort</p>
+              <p className="text-[11px] font-bold text-[#06B6D4] uppercase tracking-wider">Nya Kort</p>
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-0.5">{queueStats.newCount}</p>
             </div>
-            <div className="w-10 h-10 rounded-lg bg-[#06B6D4]/20 border border-[#06B6D4]/40 flex items-center justify-center text-[#06B6D4]">
+            <div className="w-9 h-9 rounded-lg bg-[#06B6D4]/20 border border-[#06B6D4]/40 flex items-center justify-center text-[#06B6D4] text-base">
               ✨
             </div>
           </div>
@@ -205,10 +238,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {/* Learning Cards */}
           <div className="p-4 rounded-xl bg-[#451A03]/40 border border-[#F59E0B]/30 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-[#F59E0B] uppercase tracking-wider">Under Inlärning</p>
+              <p className="text-[11px] font-bold text-[#F59E0B] uppercase tracking-wider">Under Inlärning</p>
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-0.5">{queueStats.learningCount}</p>
             </div>
-            <div className="w-10 h-10 rounded-lg bg-[#F59E0B]/20 border border-[#F59E0B]/40 flex items-center justify-center text-[#F59E0B]">
+            <div className="w-9 h-9 rounded-lg bg-[#F59E0B]/20 border border-[#F59E0B]/40 flex items-center justify-center text-[#F59E0B] text-base">
               🔄
             </div>
           </div>
@@ -216,10 +249,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {/* Review Cards */}
           <div className="p-4 rounded-xl bg-[#064E3B]/40 border border-[#10B981]/30 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-[#10B981] uppercase tracking-wider">För Repetition</p>
+              <p className="text-[11px] font-bold text-[#10B981] uppercase tracking-wider">För Repetition</p>
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-0.5">{queueStats.reviewCount}</p>
             </div>
-            <div className="w-10 h-10 rounded-lg bg-[#10B981]/20 border border-[#10B981]/40 flex items-center justify-center text-[#10B981]">
+            <div className="w-9 h-9 rounded-lg bg-[#10B981]/20 border border-[#10B981]/40 flex items-center justify-center text-[#10B981] text-base">
               🧠
             </div>
           </div>
@@ -244,14 +277,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-xs text-[#94A3B8] font-semibold">Aktuell kortlek:</span>
             <span className="text-xs font-bold text-[#00D2FF] bg-[#00D2FF]/10 px-2.5 py-1 rounded-full border border-[#00D2FF]/30">
-              {decks.find(d => d.id === selectedDeckId)?.title || 'Alla kort'}
+              {decks.find((d) => d.id === selectedDeckId)?.title || 'Alla kort'}
             </span>
           </div>
         </div>
 
         {/* Tier Progress Bars Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {tierStats.map(tier => (
+          {tierStats.map((tier) => (
             <div
               key={tier.id}
               className={`p-4 rounded-xl ${tier.bgColor} border ${tier.borderColor} space-y-3 transition-all hover:brightness-105`}
@@ -300,7 +333,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               Framsteg per CEFR-Nivå
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-              {cefrStats.map(s => (
+              {cefrStats.map((s) => (
                 <div key={s.level} className="p-3 rounded-xl bg-[#0F172A]/70 border border-[#263554] text-center space-y-1">
                   <div className="flex items-center justify-center gap-1.5">
                     {renderCefrBadge(s.level)}
@@ -403,24 +436,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {decks.map((deck) => {
             const isSelected = deck.id === selectedDeckId;
-            const deckCards = cards.filter(c => c.deckId === deck.id);
+            const deckCards = cards.filter((c) => c.deckId === deck.id);
             const totalCount = deckCards.length || deck.totalCards || 0;
-            
-            // Calculate frequency rank range for deck cards
-            const minRank = deckCards.length > 0 
-              ? Math.min(...deckCards.map(c => c.frequencyRank ?? 1))
-              : 1;
-            const maxRank = deckCards.length > 0 
-              ? Math.max(...deckCards.map(c => c.frequencyRank ?? 100))
-              : 100;
+
+            const minRank =
+              deckCards.length > 0
+                ? Math.min(...deckCards.map((c) => c.frequencyRank ?? 1))
+                : 1;
+            const maxRank =
+              deckCards.length > 0
+                ? Math.max(...deckCards.map((c) => c.frequencyRank ?? 100))
+                : 100;
 
             return (
               <div
                 key={deck.id}
                 onClick={() => onSelectDeck(deck.id)}
                 className={`p-5 rounded-2xl cursor-pointer transition-all border ${
-                  isSelected 
-                    ? 'border-[#00D2FF] bg-[#161F33] ring-1 ring-[#00D2FF]/50 shadow-xl shadow-[#00D2FF]/10' 
+                  isSelected
+                    ? 'border-[#00D2FF] bg-[#161F33] ring-1 ring-[#00D2FF]/50 shadow-xl shadow-[#00D2FF]/10'
                     : 'bg-[#161F33]/80 border-[#263554] hover:border-[#00D2FF]/60 hover:bg-[#161F33]'
                 }`}
                 tabIndex={0}
@@ -469,3 +503,4 @@ export const Dashboard: React.FC<DashboardProps> = ({
   );
 };
 
+export default Dashboard;

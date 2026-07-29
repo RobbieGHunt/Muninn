@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Deck, QueueStats, Rating, UserStats } from './types';
+import { Card, Deck, QueueStats, Rating, UserStats, UserSettings } from './types';
 import { dbStorage, DEFAULT_DECKS, INITIAL_CARDS, INITIAL_USER_STATS } from './db';
 import { Navbar } from './components/Navbar';
 import { Dashboard } from './components/Dashboard';
 import { StudyCard } from './components/StudyCard';
+import { SettingsModal } from './components/SettingsModal';
 
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -12,7 +13,29 @@ export const App: React.FC = () => {
   const [selectedDeckId, setSelectedDeckId] = useState<string>('deck-a1-core');
   const [userStats, setUserStats] = useState<UserStats>(INITIAL_USER_STATS);
   const [currentView, setCurrentView] = useState<'dashboard' | 'study' | 'summary'>('dashboard');
-  
+
+  // User Settings State (Persisted in localStorage)
+  const [settings, setSettings] = useState<UserSettings>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = localStorage.getItem('muninn_settings');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.warn('Failed to parse saved settings', e);
+        }
+      }
+    }
+    return {
+      dailyNewCards: 15,
+      dailyReviewLimit: 100,
+      speechRate: 0.9,
+      autoPlayAudio: true,
+    };
+  });
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   // Study Queue State
   const [studyQueue, setStudyQueue] = useState<Card[]>([]);
   const [studyIndex, setStudyIndex] = useState<number>(0);
@@ -37,8 +60,13 @@ export const App: React.FC = () => {
 
   // Filter cards by selected deck
   const currentDeckCards = useMemo(() => {
-    return cards.filter(c => c.deckId === selectedDeckId);
+    return cards.filter((c) => c.deckId === selectedDeckId);
   }, [cards, selectedDeckId]);
+
+  // Total Words Learned Metric (Cards in Review state, state === 2)
+  const wordsLearnedCount = useMemo(() => {
+    return cards.filter((c) => c.state === 2).length;
+  }, [cards]);
 
   // Compute Queue Stats for Navbar & Dashboard
   const queueStats: QueueStats = useMemo(() => {
@@ -46,7 +74,7 @@ export const App: React.FC = () => {
     let learningCount = 0;
     let reviewCount = 0;
 
-    currentDeckCards.forEach(c => {
+    currentDeckCards.forEach((c) => {
       if (c.state === 0) newCount++;
       else if (c.state === 1 || c.state === 3) learningCount++;
       else if (c.state === 2) reviewCount++;
@@ -55,24 +83,101 @@ export const App: React.FC = () => {
     return { newCount, learningCount, reviewCount };
   }, [currentDeckCards]);
 
-  // Start Study Session
+  // Update Settings Handler
+  const handleUpdateSettings = (newSettings: Partial<UserSettings>) => {
+    setSettings((prev) => {
+      const updated = { ...prev, ...newSettings };
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('muninn_settings', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  // Reset All Progress Handler
+  const handleResetProgress = async () => {
+    const resetCards: Card[] = cards.map((c) => ({
+      ...c,
+      state: 0,
+      stability: 0,
+      difficulty: 0,
+      elapsedDays: 0,
+      scheduledDays: 0,
+      reps: 0,
+      lapses: 0,
+      due: Date.now(),
+      lastReview: undefined,
+    }));
+
+    const resetStats: UserStats = {
+      streak: 0,
+      lastStudyDate: new Date().toISOString().split('T')[0],
+      totalReviews: 0,
+      retentionRate: 100,
+      history: {},
+    };
+
+    setCards(resetCards);
+    setUserStats(resetStats);
+
+    // Save to IndexedDB
+    try {
+      for (const card of resetCards) {
+        await dbStorage.saveCard(card);
+      }
+      await dbStorage.saveUserStats(resetStats);
+    } catch (e) {
+      console.warn('Failed to save reset progress to IndexedDB:', e);
+    }
+  };
+
+  // Start Standard Daily Study Session
   const handleStartStudy = () => {
-    const dueReviewsOrLearning = currentDeckCards.filter(c => {
+    const dueReviewsOrLearning = currentDeckCards.filter((c) => {
       if (c.state === 1 || c.state === 3) return true; // Learning / Relearning
       if (c.state === 2 && c.due <= Date.now() + 86400000) return true; // Review due within 24h
       return false;
     });
 
     const newCards = currentDeckCards
-      .filter(c => c.state === 0)
-      .sort((a, b) => a.frequencyRank - b.frequencyRank);
+      .filter((c) => c.state === 0)
+      .sort((a, b) => a.frequencyRank - b.frequencyRank)
+      .slice(0, settings.dailyNewCards);
 
     const dueQueue = [...dueReviewsOrLearning, ...newCards];
 
     // If queue empty, fall back to all cards sorted by frequencyRank ASC for demo review
-    const finalQueue = dueQueue.length > 0
-      ? dueQueue
-      : [...currentDeckCards].sort((a, b) => a.frequencyRank - b.frequencyRank);
+    const finalQueue =
+      dueQueue.length > 0
+        ? dueQueue
+        : [...currentDeckCards].sort((a, b) => a.frequencyRank - b.frequencyRank);
+
+    setStudyQueue(finalQueue);
+    setStudyIndex(0);
+    setSessionCompletedCount(0);
+    setCurrentView('study');
+  };
+
+  // Start Bonus Study Session (Studera extra ord 🚀)
+  const handleStartBonusStudy = () => {
+    const dueReviewsOrLearning = currentDeckCards.filter((c) => {
+      if (c.state === 1 || c.state === 3) return true;
+      if (c.state === 2 && c.due <= Date.now() + 86400000) return true;
+      return false;
+    });
+
+    // Draw extra new cards beyond the daily limit (+20 extra cards for bonus)
+    const bonusNewCards = currentDeckCards
+      .filter((c) => c.state === 0)
+      .sort((a, b) => a.frequencyRank - b.frequencyRank)
+      .slice(0, settings.dailyNewCards + 20);
+
+    const bonusQueue = [...dueReviewsOrLearning, ...bonusNewCards];
+
+    const finalQueue =
+      bonusQueue.length > 0
+        ? bonusQueue
+        : [...currentDeckCards].sort((a, b) => a.frequencyRank - b.frequencyRank);
 
     setStudyQueue(finalQueue);
     setStudyIndex(0);
@@ -85,27 +190,31 @@ export const App: React.FC = () => {
     if (studyIndex >= studyQueue.length) return;
 
     const currentCard = studyQueue[studyIndex];
-    
+
     // Compute updated FSRS card metrics
     let nextState: Card['state'] = currentCard.state;
     let nextStability = currentCard.stability || 1.0;
     let nextDifficulty = currentCard.difficulty || 5.0;
     let nextDue = Date.now();
 
-    if (rating === 1) { // Again
+    if (rating === 1) {
+      // Again
       nextState = 1; // Learning
       nextStability = Math.max(0.5, nextStability * 0.8);
       nextDifficulty = Math.min(10, nextDifficulty + 0.4);
       nextDue = Date.now() + 10 * 60 * 1000; // 10 minutes
-    } else if (rating === 2) { // Hard
+    } else if (rating === 2) {
+      // Hard
       nextState = currentCard.state === 0 ? 1 : currentCard.state;
       nextStability = nextStability * 1.2;
       nextDue = Date.now() + 1.2 * 86400 * 1000; // 1.2 days
-    } else if (rating === 3) { // Good
+    } else if (rating === 3) {
+      // Good
       nextState = 2; // Review
       nextStability = currentCard.state === 0 ? 2.5 : nextStability * 2.2;
       nextDue = Date.now() + 3.5 * 86400 * 1000; // 3.5 days
-    } else if (rating === 4) { // Easy
+    } else if (rating === 4) {
+      // Easy
       nextState = 2; // Review
       nextStability = currentCard.state === 0 ? 4.0 : nextStability * 3.5;
       nextDifficulty = Math.max(1, nextDifficulty - 0.2);
@@ -120,12 +229,12 @@ export const App: React.FC = () => {
       due: nextDue,
       reps: currentCard.reps + 1,
       lapses: rating === 1 ? currentCard.lapses + 1 : currentCard.lapses,
-      lastReview: Date.now()
+      lastReview: Date.now(),
     };
 
     // Update in state
-    setCards(prev => prev.map(c => c.id === updatedCard.id ? updatedCard : c));
-    
+    setCards((prev) => prev.map((c) => (c.id === updatedCard.id ? updatedCard : c)));
+
     // Save to IndexedDB
     await dbStorage.saveCard(updatedCard);
 
@@ -133,18 +242,19 @@ export const App: React.FC = () => {
     const todayStr = new Date().toISOString().split('T')[0];
     const newStats: UserStats = {
       ...userStats,
+      streak: userStats.streak === 0 ? 1 : userStats.streak,
       totalReviews: userStats.totalReviews + 1,
       lastStudyDate: todayStr,
       history: {
         ...userStats.history,
-        [todayStr]: (userStats.history[todayStr] || 0) + 1
-      }
+        [todayStr]: (userStats.history[todayStr] || 0) + 1,
+      },
     };
     setUserStats(newStats);
     await dbStorage.saveUserStats(newStats);
 
     const nextIndex = studyIndex + 1;
-    setSessionCompletedCount(prev => prev + 1);
+    setSessionCompletedCount((prev) => prev + 1);
 
     if (nextIndex < studyQueue.length) {
       setStudyIndex(nextIndex);
@@ -154,7 +264,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const currentDeck = decks.find(d => d.id === selectedDeckId);
+  const currentDeck = decks.find((d) => d.id === selectedDeckId);
   const currentDeckTitle = currentDeck?.title || 'Svenska';
   const currentDeckCefr = currentDeck?.cefrLevel || 'A1';
 
@@ -178,6 +288,7 @@ export const App: React.FC = () => {
         onNavigate={(view) => setCurrentView(view)}
         deckTitle={currentDeckTitle}
         cefrLevel={currentDeckCefr}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main View Area */}
@@ -190,7 +301,9 @@ export const App: React.FC = () => {
             selectedDeckId={selectedDeckId}
             onSelectDeck={(id) => setSelectedDeckId(id)}
             onStartStudy={handleStartStudy}
+            onStartBonusStudy={handleStartBonusStudy}
             cards={cards}
+            wordsLearnedCount={wordsLearnedCount}
           />
         )}
 
@@ -200,6 +313,8 @@ export const App: React.FC = () => {
             onRate={handleRateCard}
             totalInQueue={studyQueue.length}
             currentIndex={studyIndex}
+            speechRate={settings.speechRate}
+            autoPlayAudio={settings.autoPlayAudio}
           />
         )}
 
@@ -251,6 +366,17 @@ export const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        onUpdateSettings={handleUpdateSettings}
+        wordsLearnedCount={wordsLearnedCount}
+        totalCardsCount={cards.length}
+        onResetProgress={handleResetProgress}
+      />
 
       {/* Footer */}
       <footer className="w-full border-t border-[#263554]/60 py-4 text-center text-xs text-[#64748B]">

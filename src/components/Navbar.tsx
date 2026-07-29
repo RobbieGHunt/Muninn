@@ -8,6 +8,7 @@ interface NavbarProps {
   onNavigate: (view: 'dashboard' | 'study') => void;
   deckTitle?: string;
   cefrLevel?: CEFRLevel | string;
+  onOpenSettings: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -16,7 +17,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   onNavigate,
   deckTitle = 'Svenska A1/A2 Grundord',
-  cefrLevel = 'A1'
+  cefrLevel = 'A1',
+  onOpenSettings,
 }) => {
   // Helper for CEFR Badge
   const renderCefrBadge = (level: string) => {
@@ -37,7 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-[#0B0F19]/90 border-b border-[#263554] transition-all">
+    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-[#0B0F19]/90 border-b border-[#263554] transition-all">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
         
         {/* Brand Logo & Name */}
@@ -79,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         {/* Right Stats & Navigation */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           
           {/* Daily Streak Counter */}
           <div 
@@ -95,7 +97,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Queue Count Badges */}
-          <div className="flex items-center gap-1.5 bg-[#161F33]/90 p-1 rounded-xl border border-[#263554] shadow-sm">
+          <div className="flex items-center gap-1 bg-[#161F33]/90 p-1 rounded-xl border border-[#263554] shadow-sm">
             {/* New Cards */}
             <div 
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#06B6D4]/15 border border-[#06B6D4]/30 text-[#06B6D4]"
@@ -136,12 +138,25 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <button
               onClick={() => onNavigate('study')}
-              className="min-h-[48px] min-w-[48px] px-5 py-2 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] text-xs font-extrabold rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] hover:brightness-110 active:scale-95 shadow-md shadow-[#00D2FF]/20 flex items-center justify-center"
+              className="min-h-[48px] min-w-[48px] px-4 sm:px-5 py-2 bg-gradient-to-r from-[#00D2FF] to-[#3A7BD5] text-[#0F172A] text-xs font-extrabold rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] hover:brightness-110 active:scale-95 shadow-md shadow-[#00D2FF]/20 flex items-center justify-center"
               aria-label="Starta repetitionssession"
             >
               Starta →
             </button>
           )}
+
+          {/* Settings Gear Icon Button (48px+ touch target) */}
+          <button
+            onClick={onOpenSettings}
+            className="min-h-[48px] min-w-[48px] p-2.5 bg-[#161F33] hover:bg-[#263554] text-[#94A3B8] hover:text-[#00D2FF] border border-[#263554] hover:border-[#00D2FF]/50 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#00D2FF] active:scale-95 flex items-center justify-center shadow-md"
+            title="Öppna inställningar"
+            aria-label="Öppna inställningar"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
 
         </div>
 
@@ -150,3 +165,4 @@ export const Navbar: React.FC<NavbarProps> = ({
   );
 };
 
+export default Navbar;

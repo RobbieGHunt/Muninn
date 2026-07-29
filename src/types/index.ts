@@ -49,3 +49,27 @@ export interface ReviewLog {
   scheduledDays: number;
   reviewTimestamp: number;
 }
+
+export interface LexiconEntry {
+  id: string;
+  front: string;
+  back: string;
+  frequencyRank: number;
+  cefrLevel: CEFRLevel;
+  wordClass: string;
+  ipa: string;
+  exampleSv: string;
+  exampleEn: string;
+  inflections: string[];
+  gender?: 'en' | 'ett';
+  audioUrl?: string;
+}
+
+export interface UserSettings {
+  dailyNewCards: number;
+  dailyReviewLimit: number;
+  speechRate: number;
+  autoPlayAudio: boolean;
+}
+
+

@@ -65,3 +65,26 @@ export interface UserStats {
   retentionRate: number; // e.g. 91.5
   history: Record<string, number>; // YYYY-MM-DD -> review count
 }
+
+export interface UserSettings {
+  dailyNewCards: number;
+  dailyReviewLimit: number;
+  speechRate: number;
+  autoPlayAudio: boolean;
+}
+
+export interface LexiconEntry {
+  id: string;
+  front: string;
+  back: string;
+  frequencyRank: number;
+  cefrLevel: CEFRLevel;
+  wordClass: string;
+  ipa: string;
+  exampleSv: string;
+  exampleEn: string;
+  inflections: string[];
+  gender?: 'en' | 'ett';
+  audioUrl?: string;
+}
+

@@ -1,4 +1,4 @@
-import { Card, Deck, UserStats } from './types';
+import { Card, Deck, UserSettings, UserStats } from './types';
 import { LEXICON_CARDS, LEXICON_DECKS } from './data/lexicon';
 
 const DB_NAME = 'MuninnDB';
@@ -6,6 +6,13 @@ const DB_VERSION = 1;
 
 export const DEFAULT_DECKS: Deck[] = LEXICON_DECKS;
 export const INITIAL_CARDS: Card[] = LEXICON_CARDS;
+
+export const DEFAULT_USER_SETTINGS: UserSettings = {
+  dailyNewCards: 20,
+  dailyReviewLimit: 100,
+  speechRate: 1.0,
+  autoPlayAudio: true,
+};
 
 export const INITIAL_USER_STATS: UserStats = {
   streak: 7,
@@ -46,6 +53,9 @@ class IndexedDBStorage {
         if (!db.objectStoreNames.contains('user_stats')) {
           db.createObjectStore('user_stats', { keyPath: 'id' });
         }
+        if (!db.objectStoreNames.contains('user_settings')) {
+          db.createObjectStore('user_settings', { keyPath: 'id' });
+        }
       };
 
       request.onsuccess = () => resolve(request.result);
@@ -76,13 +86,43 @@ class IndexedDBStorage {
     }
   }
 
-  public async getNewCards(deckId?: string): Promise<Card[]> {
-    const cards = await this.getCards();
-    const newCards = cards.filter((c) => c.state === 0);
-    if (deckId) {
-      return newCards.filter((c) => c.deckId === deckId).sort((a, b) => a.frequencyRank - b.frequencyRank);
+  public async getNewCards(
+    deckIdOrOptions?: string | { deckId?: string; limit?: number; bonusSession?: boolean },
+    limitParam?: number,
+    bonusSessionParam?: boolean
+  ): Promise<Card[]> {
+    let deckId: string | undefined;
+    let limit: number | undefined;
+    let bonusSession: boolean | undefined;
+
+    if (typeof deckIdOrOptions === 'object' && deckIdOrOptions !== null) {
+      deckId = deckIdOrOptions.deckId;
+      limit = deckIdOrOptions.limit;
+      bonusSession = deckIdOrOptions.bonusSession;
+    } else {
+      deckId = deckIdOrOptions;
+      limit = limitParam;
+      bonusSession = bonusSessionParam;
     }
-    return newCards.sort((a, b) => a.frequencyRank - b.frequencyRank);
+
+    const cards = await this.getCards();
+    let newCards = cards.filter((c) => c.state === 0);
+    if (deckId) {
+      newCards = newCards.filter((c) => c.deckId === deckId);
+    }
+    newCards.sort((a, b) => a.frequencyRank - b.frequencyRank);
+
+    if (limit !== undefined && limit > 0) {
+      return newCards.slice(0, limit);
+    }
+
+    if (bonusSession) {
+      return newCards;
+    }
+
+    const settings = await this.getUserSettings();
+    const cap = settings.dailyNewCards;
+    return newCards.slice(0, cap);
   }
 
   public async saveCard(card: Card): Promise<void> {
@@ -121,17 +161,72 @@ class IndexedDBStorage {
     }
   }
 
+  public async getUserSettings(): Promise<UserSettings> {
+    try {
+      const db = await this.dbPromise;
+      return new Promise((resolve) => {
+        const tx = db.transaction('user_settings', 'readonly');
+        const req = tx.objectStore('user_settings').get('main');
+        req.onsuccess = () => {
+          resolve(req.result ? req.result.settings : DEFAULT_USER_SETTINGS);
+        };
+        req.onerror = () => resolve(DEFAULT_USER_SETTINGS);
+      });
+    } catch {
+      return DEFAULT_USER_SETTINGS;
+    }
+  }
+
+  public async saveUserSettings(settings: UserSettings): Promise<void> {
+    try {
+      const db = await this.dbPromise;
+      const tx = db.transaction('user_settings', 'readwrite');
+      tx.objectStore('user_settings').put({ id: 'main', settings });
+    } catch (e) {
+      console.warn('Failed to save user settings:', e);
+    }
+  }
+
+  public async resetProgress(): Promise<void> {
+    try {
+      const cards = await this.getCards();
+      for (const card of cards) {
+        await this.saveCard({
+          ...card,
+          state: 0,
+          due: Date.now(),
+          stability: 0,
+          difficulty: 0,
+          elapsedDays: 0,
+          scheduledDays: 0,
+          reps: 0,
+          lapses: 0,
+          lastReview: undefined,
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to reset progress in IndexedDB:', e);
+    }
+  }
+
+  public async getWordsLearned(): Promise<number> {
+    const cards = await this.getCards();
+    return cards.filter((c) => c.state > 0).length;
+  }
+
   private async seedData(): Promise<void> {
     try {
       const db = await this.dbPromise;
-      const tx = db.transaction(['cards', 'decks', 'user_stats'], 'readwrite');
+      const tx = db.transaction(['cards', 'decks', 'user_stats', 'user_settings'], 'readwrite');
       const cardStore = tx.objectStore('cards');
       const deckStore = tx.objectStore('decks');
       const statsStore = tx.objectStore('user_stats');
+      const settingsStore = tx.objectStore('user_settings');
 
       INITIAL_CARDS.forEach((c) => cardStore.put(c));
       DEFAULT_DECKS.forEach((d) => deckStore.put(d));
       statsStore.put({ id: 'main', stats: INITIAL_USER_STATS });
+      settingsStore.put({ id: 'main', settings: DEFAULT_USER_SETTINGS });
     } catch (e) {
       console.warn('Error seeding data:', e);
     }
@@ -139,3 +234,4 @@ class IndexedDBStorage {
 }
 
 export const dbStorage = new IndexedDBStorage();
+
