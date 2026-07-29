@@ -513,7 +513,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     />
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-[#94A3B8] font-semibold pt-1">
-                    <span>{learned} inlärda ({reviewed} behärskade)</span>
+                    <span>{learned} av {total} ord i kortleken ({percent}%)</span>
                     <span className="text-[#06B6D4]">{unseen} oinledda</span>
                   </div>
                 </div>
